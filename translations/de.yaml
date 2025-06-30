@@ -1,0 +1,94 @@
+configuration:
+  verbindung:
+    name: "Verbindung"
+    description: "Verbindungseinstellungen zur Samsung EHS"
+  verbindung.typ:
+    name: "Verbindungstyp"
+    description: "Art der Verbindung zur Wärmepumpe"
+  verbindung.tcp:
+    name: "TCP Verbindung"
+    description: "Einstellungen für TCP/IP Verbindung (RS485-zu-Ethernet Adapter)"
+  verbindung.tcp.ip:
+    name: "IP-Adresse"
+    description: "IP-Adresse des RS485-zu-Ethernet Adapters"
+  verbindung.tcp.port:
+    name: "Port"
+    description: "Port des RS485-zu-Ethernet Adapters"
+  verbindung.serial:
+    name: "Serielle Verbindung"
+    description: "Einstellungen für serielle Verbindung (USB-RS485 Adapter)"
+  verbindung.serial.device:
+    name: "Gerätepfad"
+    description: "Pfad zum seriellen Gerät (z.B. /dev/ttyUSB0)"
+  verbindung.serial.baudrate:
+    name: "Baudrate"
+    description: "Baudrate für die serielle Verbindung"
+  mqtt:
+    name: "MQTT"
+    description: "MQTT Broker Einstellungen"
+  mqtt.broker_url:
+    name: "Broker URL"
+    description: "URL oder IP-Adresse des MQTT Brokers"
+  mqtt.broker_port:
+    name: "Broker Port"
+    description: "Port des MQTT Brokers"
+  mqtt.benutzer:
+    name: "Benutzername"
+    description: "MQTT Benutzername (optional)"
+  mqtt.passwort:
+    name: "Passwort"
+    description: "MQTT Passwort (optional)"
+  mqtt.client_id:
+    name: "Client ID"
+    description: "MQTT Client Identifikation"
+  mqtt.topic_prefix:
+    name: "Topic Präfix"
+    description: "Präfix für MQTT Topics"
+  mqtt.homeassistant_discovery:
+    name: "Home Assistant Auto-Discovery"
+    description: "Aktiviert die automatische Erkennung in Home Assistant"
+  mqtt.camel_case_topics:
+    name: "CamelCase Topics"
+    description: "Verwendet CamelCase für Topic-Namen"
+  allgemein:
+    name: "Allgemeine Einstellungen"
+    description: "Grundlegende Konfigurationsoptionen"
+  allgemein.steuerung_erlauben:
+    name: "Steuerung erlauben"
+    description: "WARNUNG: Erlaubt die Steuerung der Wärmepumpe über Home Assistant"
+  allgemein.protokoll_datei:
+    name: "Protokoll-Datei"
+    description: "Pfad zur Protokoll-Datei (optional, für Debugging)"
+  logging:
+    name: "Protokollierung"
+    description: "Einstellungen für die Protokollausgabe"
+  logging.geraet_hinzugefuegt:
+    name: "Gerät hinzugefügt"
+    description: "Protokolliert wenn neue Geräte erkannt werden"
+  logging.nachricht_nicht_gefunden:
+    name: "Nachricht nicht gefunden"
+    description: "Protokolliert unbekannte Nachrichten"
+  logging.paket_nicht_von_innen_aussen:
+    name: "Paket nicht von Innen/Außen"
+    description: "Protokolliert Pakete die nicht von der Wärmepumpe stammen"
+  logging.verarbeitete_nachricht:
+    name: "Verarbeitete Nachricht"
+    description: "Protokolliert alle verarbeiteten Nachrichten"
+  logging.poller_nachricht:
+    name: "Poller Nachricht"
+    description: "Protokolliert Polling-Nachrichten"
+  logging.steuerungs_nachricht:
+    name: "Steuerungs-Nachricht"
+    description: "Protokolliert Steuerungsbefehle"
+  logging.ungueltiges_paket:
+    name: "Ungültiges Paket"
+    description: "Protokolliert ungültige Datenpakete"
+  polling:
+    name: "Polling"
+    description: "Aktive Abfrage von Werten"
+  polling.aktiviert:
+    name: "Polling aktiviert"
+    description: "WARNUNG: Aktiviert die aktive Abfrage von Werten"
+  polling.intervalle:
+    name: "Polling-Intervalle"
+    description: "Konfiguration der Abfrage-Intervalle"

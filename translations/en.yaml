@@ -1,0 +1,94 @@
+configuration:
+  verbindung:
+    name: "Connection"
+    description: "Connection settings to Samsung EHS"
+  verbindung.typ:
+    name: "Connection Type"
+    description: "Type of connection to the heat pump"
+  verbindung.tcp:
+    name: "TCP Connection"
+    description: "Settings for TCP/IP connection (RS485-to-Ethernet adapter)"
+  verbindung.tcp.ip:
+    name: "IP Address"
+    description: "IP address of the RS485-to-Ethernet adapter"
+  verbindung.tcp.port:
+    name: "Port"
+    description: "Port of the RS485-to-Ethernet adapter"
+  verbindung.serial:
+    name: "Serial Connection"
+    description: "Settings for serial connection (USB-RS485 adapter)"
+  verbindung.serial.device:
+    name: "Device Path"
+    description: "Path to serial device (e.g. /dev/ttyUSB0)"
+  verbindung.serial.baudrate:
+    name: "Baudrate"
+    description: "Baudrate for serial connection"
+  mqtt:
+    name: "MQTT"
+    description: "MQTT Broker Settings"
+  mqtt.broker_url:
+    name: "Broker URL"
+    description: "URL or IP address of MQTT broker"
+  mqtt.broker_port:
+    name: "Broker Port"
+    description: "Port of MQTT broker"
+  mqtt.benutzer:
+    name: "Username"
+    description: "MQTT username (optional)"
+  mqtt.passwort:
+    name: "Password"
+    description: "MQTT password (optional)"
+  mqtt.client_id:
+    name: "Client ID"
+    description: "MQTT client identification"
+  mqtt.topic_prefix:
+    name: "Topic Prefix"
+    description: "Prefix for MQTT topics"
+  mqtt.homeassistant_discovery:
+    name: "Home Assistant Auto-Discovery"
+    description: "Enables automatic discovery in Home Assistant"
+  mqtt.camel_case_topics:
+    name: "CamelCase Topics"
+    description: "Uses CamelCase for topic names"
+  allgemein:
+    name: "General Settings"
+    description: "Basic configuration options"
+  allgemein.steuerung_erlauben:
+    name: "Allow Control"
+    description: "WARNING: Allows control of heat pump via Home Assistant"
+  allgemein.protokoll_datei:
+    name: "Protocol File"
+    description: "Path to protocol file (optional, for debugging)"
+  logging:
+    name: "Logging"
+    description: "Settings for log output"
+  logging.geraet_hinzugefuegt:
+    name: "Device Added"
+    description: "Logs when new devices are detected"
+  logging.nachricht_nicht_gefunden:
+    name: "Message Not Found"
+    description: "Logs unknown messages"
+  logging.paket_nicht_von_innen_aussen:
+    name: "Packet Not From Indoor/Outdoor"
+    description: "Logs packets not from heat pump"
+  logging.verarbeitete_nachricht:
+    name: "Processed Message"
+    description: "Logs all processed messages"
+  logging.poller_nachricht:
+    name: "Poller Message"
+    description: "Logs polling messages"
+  logging.steuerungs_nachricht:
+    name: "Control Message"
+    description: "Logs control commands"
+  logging.ungueltiges_paket:
+    name: "Invalid Packet"
+    description: "Logs invalid data packets"
+  polling:
+    name: "Polling"
+    description: "Active polling of values"
+  polling.aktiviert:
+    name: "Polling Enabled"
+    description: "WARNING: Enables active polling of values"
+  polling.intervalle:
+    name: "Polling Intervals"
+    description: "Configuration of polling intervals"

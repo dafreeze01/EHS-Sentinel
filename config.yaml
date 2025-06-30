@@ -1,0 +1,105 @@
+name: "EHS-Sentinel"
+description: "Samsung EHS Wärmepumpen Integration für Home Assistant"
+version: "1.0.0"
+slug: "ehs-sentinel"
+init: false
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+startup: application
+boot: auto
+options:
+  verbindung:
+    typ: "tcp"
+    tcp:
+      ip: "192.168.1.100"
+      port: 4196
+    serial:
+      device: "/dev/ttyUSB0"
+      baudrate: 9600
+  mqtt:
+    broker_url: "core-mosquitto"
+    broker_port: 1883
+    benutzer: ""
+    passwort: ""
+    client_id: "ehs-sentinel"
+    topic_prefix: "ehsSentinel"
+    homeassistant_discovery: true
+    camel_case_topics: true
+  allgemein:
+    steuerung_erlauben: false
+    protokoll_datei: ""
+  logging:
+    geraet_hinzugefuegt: true
+    nachricht_nicht_gefunden: false
+    paket_nicht_von_innen_aussen: false
+    verarbeitete_nachricht: false
+    poller_nachricht: false
+    steuerungs_nachricht: false
+    ungueltiges_paket: false
+  polling:
+    aktiviert: false
+    intervalle:
+      - name: "fsv10xx"
+        aktiviert: false
+        zeitplan: "30m"
+      - name: "fsv20xx"
+        aktiviert: false
+        zeitplan: "30m"
+      - name: "fsv30xx"
+        aktiviert: false
+        zeitplan: "30m"
+      - name: "fsv40xx"
+        aktiviert: false
+        zeitplan: "30m"
+      - name: "fsv50xx"
+        aktiviert: false
+        zeitplan: "30m"
+schema:
+  verbindung:
+    typ: "list(tcp|serial)"
+    tcp:
+      ip: "str"
+      port: "port"
+    serial:
+      device: "str"
+      baudrate: "int"
+  mqtt:
+    broker_url: "str"
+    broker_port: "port"
+    benutzer: "str?"
+    passwort: "password?"
+    client_id: "str"
+    topic_prefix: "str"
+    homeassistant_discovery: "bool"
+    camel_case_topics: "bool"
+  allgemein:
+    steuerung_erlauben: "bool"
+    protokoll_datei: "str?"
+  logging:
+    geraet_hinzugefuegt: "bool"
+    nachricht_nicht_gefunden: "bool"
+    paket_nicht_von_innen_aussen: "bool"
+    verarbeitete_nachricht: "bool"
+    poller_nachricht: "bool"
+    steuerungs_nachricht: "bool"
+    ungueltiges_paket: "bool"
+  polling:
+    aktiviert: "bool"
+    intervalle:
+      - name: "str"
+        aktiviert: "bool"
+        zeitplan: "str"
+ports:
+  4196/tcp: 4196
+devices:
+  - /dev/ttyUSB0
+  - /dev/ttyUSB1
+  - /dev/ttyACM0
+  - /dev/ttyACM1
+services:
+  - mqtt:need
+image: "ghcr.io/echoDaveD/ehs-sentinel-addon"
