@@ -2,6 +2,8 @@ import asyncio
 import serial
 import serial_asyncio
 import traceback
+import json
+import os
 from MessageProcessor import MessageProcessor
 from MessageProducer import MessageProducer
 from EHSArguments import EHSArguments
@@ -9,7 +11,6 @@ from EHSConfig import EHSConfig
 from EHSExceptions import MessageWarningException, SkipInvalidPacketException
 from MQTTClient import MQTTClient
 import aiofiles
-import json
 import random
 
 # Get the logger
@@ -17,22 +18,11 @@ from CustomLogger import logger
 from NASAPacket import NASAPacket, AddressClassEnum, PacketType, DataType
 from NASAMessage import NASAMessage
 
-version = "1.0.0 Stable"
+version = "1.0.0 Home Assistant Addon"
 
 async def main():
     """
-    Main function to start the EHS Sentinel application.
-    This function performs the following steps:
-    1. Logs the startup banner and version information.
-    2. Reads command-line arguments.
-    3. Reads configuration settings.
-    4. Connects to the MQTT broker.
-    5. If dry run mode is enabled, reads data from a dump file and processes it.
-    6. If not in dry run mode, reads data from a serial port and processes it.
-    Args:
-        None
-    Returns:
-        None
+    Main function to start the EHS Sentinel application for Home Assistant Addon.
     """
 
     logger.info("####################################################################################################################")
@@ -49,32 +39,20 @@ async def main():
     logger.info(f"Starting EHSSentinel {version} written by echoDave")
     logger.info("")
 
-    logger.info("Reading Arguments ...")
+    logger.info("Reading Home Assistant Addon Configuration ...")
     args = EHSArguments()
 
     logger.info("Reading Configuration ...")
     config = EHSConfig()
 
-    logger.info("connecting to MQTT Borker ...")
+    logger.info("connecting to MQTT Broker ...")
     mqtt = MQTTClient()
     await mqtt.connect()
 
     await asyncio.sleep(1)
 
-    # if dryrun then we read from dumpfile
-    if args.DRYRUN:
-        logger.info(f"DRYRUN detected, reading from dumpfile {args.DUMPFILE}")
-        async with aiofiles.open(args.DUMPFILE, mode='r') as file:
-            async for line in file:
-                try:
-                    line = json.loads(line.strip()) # for [12, 234, 456 ,67]
-                except:
-                    line = line.strip().replace("'", "").replace("[", "").replace("]", "").split(", ") # for ['0x1', '0x2' ..]
-                    line = [int(value, 16) for value in line]
-                await process_packet(line, args, config)
-    else:
-        # we are not in dryrun mode, so we need to read from Serial Pimort
-        await serial_connection(config, args)
+    # we are not in dryrun mode for addon, so we need to read from Serial Port
+    await serial_connection(config, args)
 
 async def process_buffer(buffer, args, config):
     if buffer:
@@ -120,8 +98,6 @@ async def serial_read(reader: asyncio.StreamReader, args, config):
 
     while True:
         current_byte = await reader.read(1)  # read bitewise
-        #data = await reader.read(1024)
-        #data = await reader.readuntil(b'\x34fd')
         if current_byte:
             if packet_started:
                 data.extend(current_byte)
@@ -156,13 +132,10 @@ async def serial_read(reader: asyncio.StreamReader, args, config):
 
             prev_byte = current_byte
 
-        #await asyncio.sleep(0.001)  # Yield control to other tasks
-
-
 async def serial_write(writer:asyncio.StreamWriter, config):
     producer = MessageProducer(writer=writer)
 
-    # Wait 20s befor initial polling
+    # Wait 20s before initial polling
     await asyncio.sleep(20)
 
     if config.POLLING is not None:
@@ -181,64 +154,60 @@ async def make_default_request_packet(producer: MessageProducer, config: EHSConf
         try:
             await producer.read_request(message_list)
         except MessageWarningException as e:
-            logger.warning("Polling Messages was not successfull")
+            logger.warning("Polling Messages was not successful")
             logger.warning(f"Error processing message: {e}")
             logger.warning(f"Message List: {message_list}")
         except Exception as e:
-            logger.error("Error Accured, Polling will be skipped")
+            logger.error("Error Occurred, Polling will be skipped")
             logger.error(f"Error processing message: {e}")
             logger.error(traceback.format_exc())
         await asyncio.sleep(poller['schedule'])
         logger.info(f"Refresh Poller {poller['name']}")
 
 async def process_packet(buffer, args, config):
-    if args.DUMPFILE and not args.DRYRUN:
-        async with aiofiles.open(args.DUMPFILE, "a") as dumpWriter:
-           await dumpWriter.write(f"{buffer}\n")
-    else:
-        try:
-            nasa_packet = NASAPacket()
-            nasa_packet.parse(buffer)
-            logger.debug("Packet processed: ")
-            logger.debug(f"Packet raw: {[hex(x) for x in buffer]}")
-            logger.debug(nasa_packet)
-            if nasa_packet.packet_source_address_class in (AddressClassEnum.Outdoor, AddressClassEnum.Indoor):
-                messageProcessor = MessageProcessor()
-                await messageProcessor.process_message(nasa_packet)    
-            elif nasa_packet.packet_source_address_class == AddressClassEnum.WiFiKit and \
-                nasa_packet.packet_dest_address_class == AddressClassEnum.BroadcastSelfLayer and \
-                nasa_packet.packet_data_type == DataType.Notification:
-                pass
+    try:
+        nasa_packet = NASAPacket()
+        nasa_packet.parse(buffer)
+        logger.debug("Packet processed: ")
+        logger.debug(f"Packet raw: {[hex(x) for x in buffer]}")
+        logger.debug(nasa_packet)
+        if nasa_packet.packet_source_address_class in (AddressClassEnum.Outdoor, AddressClassEnum.Indoor):
+            messageProcessor = MessageProcessor()
+            await messageProcessor.process_message(nasa_packet)    
+        elif nasa_packet.packet_source_address_class == AddressClassEnum.WiFiKit and \
+            nasa_packet.packet_dest_address_class == AddressClassEnum.BroadcastSelfLayer and \
+            nasa_packet.packet_data_type == DataType.Notification:
+            pass
+        else:
+            if config.LOGGING['packetNotFromIndoorOutdoor']:
+                logger.info("Message not From Indoor or Outdoor") 
+                logger.info(nasa_packet)
+                logger.info(f"Packet int: {[x for x in buffer]}")
+                logger.info(f"Packet hex: {[hex(x) for x in buffer]}")
             else:
-                if config.LOGGING['packetNotFromIndoorOutdoor']:
-                    logger.info("Message not From Indoor or Outdoor") 
-                    logger.info(nasa_packet)
-                    logger.info(f"Packet int: {[x for x in buffer]}")
-                    logger.info(f"Packet hex: {[hex(x) for x in buffer]}")
-                else:
-                    logger.debug("Message not From Indoor or Outdoor") 
-                    logger.debug(nasa_packet)
-                    logger.debug(f"Packet int: {[x for x in buffer]}")
-                    logger.debug(f"Packet hex: {[hex(x) for x in buffer]}")
-        except ValueError as e:
-            logger.warning("Value Error on parsing Packet, Packet will be skipped")
-            logger.warning(f"Error processing message: {e}")
-            logger.warning(f"Complete Packet: {[hex(x) for x in buffer]}")
-            logger.warning(traceback.format_exc())
-        except SkipInvalidPacketException as e:
-            logger.debug("Warnung accured, Packet will be skipped")
-            logger.debug(f"Error processing message: {e}")
-            logger.debug(f"Complete Packet: {[hex(x) for x in buffer]}")
-            logger.debug(traceback.format_exc())
-        except MessageWarningException as e:
-            logger.warning("Warnung accured, Packet will be skipped")
-            logger.warning(f"Error processing message: {e}")
-            logger.warning(f"Complete Packet: {[hex(x) for x in buffer]}")
-            logger.warning(traceback.format_exc())
-        except Exception as e:
-            logger.error("Error Accured, Packet will be skipped")
-            logger.error(f"Error processing message: {e}")
-            logger.error(traceback.format_exc())
+                logger.debug("Message not From Indoor or Outdoor") 
+                logger.debug(nasa_packet)
+                logger.debug(f"Packet int: {[x for x in buffer]}")
+                logger.debug(f"Packet hex: {[hex(x) for x in buffer]}")
+    except ValueError as e:
+        logger.warning("Value Error on parsing Packet, Packet will be skipped")
+        logger.warning(f"Error processing message: {e}")
+        logger.warning(f"Complete Packet: {[hex(x) for x in buffer]}")
+        logger.warning(traceback.format_exc())
+    except SkipInvalidPacketException as e:
+        logger.debug("Warning occurred, Packet will be skipped")
+        logger.debug(f"Error processing message: {e}")
+        logger.debug(f"Complete Packet: {[hex(x) for x in buffer]}")
+        logger.debug(traceback.format_exc())
+    except MessageWarningException as e:
+        logger.warning("Warning occurred, Packet will be skipped")
+        logger.warning(f"Error processing message: {e}")
+        logger.warning(f"Complete Packet: {[hex(x) for x in buffer]}")
+        logger.warning(traceback.format_exc())
+    except Exception as e:
+        logger.error("Error Occurred, Packet will be skipped")
+        logger.error(f"Error processing message: {e}")
+        logger.error(traceback.format_exc())
 
 if __name__ == "__main__":
     try:

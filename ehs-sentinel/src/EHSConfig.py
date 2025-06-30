@@ -3,14 +3,14 @@ from EHSArguments import EHSArguments
 import yaml
 import os
 import re
+import json
 
 from CustomLogger import logger
 
 class EHSConfig():
     """
     Singleton class to handle the configuration for the EHS Sentinel application.
-    This class reads configuration parameters from a YAML file and validates them.
-    It ensures that only one instance of the configuration exists throughout the application.
+    Modified for Home Assistant Addon support.
     """
 
     _instance = None
@@ -38,29 +38,143 @@ class EHSConfig():
         logger.debug("init EHSConfig")
         self.args = EHSArguments()
 
-        with open(self.args.CONFIGFILE, mode='r') as file:
-            config = yaml.safe_load(file)
-            self.MQTT = config.get('mqtt')
-            self.GENERAL = config.get('general')
-
-            if 'tcp' in config:
-                self.TCP = config.get('tcp')
-
-            if 'serial' in config:
-                self.SERIAL = config.get('serial')
-
-            if 'logging' in config:
-                self.LOGGING = config.get('logging')
-            else:
-                self.LOGGING = {}
-
-            if 'polling' in config:
-                self.POLLING = config.get('polling')
-
-            logger.debug(f"Configuration loaded: {config}")
-            
+        if self.args.ADDON_CONFIG:
+            # Generate config from Home Assistant Addon options
+            self._generate_config_from_addon()
+        else:
+            # Load from traditional config file
+            with open(self.args.CONFIGFILE, mode='r') as file:
+                config = yaml.safe_load(file)
+                self._load_config(config)
 
         self.validate()
+
+    def _generate_config_from_addon(self):
+        """Generate configuration from Home Assistant Addon options"""
+        addon_config = self.args.ADDON_CONFIG
+        
+        config = {
+            'general': {
+                'nasaRepositoryFile': '/app/data/NasaRepository.yml',
+                'allowControl': addon_config.get('allgemein', {}).get('steuerung_erlauben', False)
+            },
+            'mqtt': {
+                'broker-url': addon_config.get('mqtt', {}).get('broker_url', 'core-mosquitto'),
+                'broker-port': addon_config.get('mqtt', {}).get('broker_port', 1883),
+                'client-id': addon_config.get('mqtt', {}).get('client_id', 'ehs-sentinel'),
+                'topicPrefix': addon_config.get('mqtt', {}).get('topic_prefix', 'ehsSentinel'),
+                'homeAssistantAutoDiscoverTopic': 'homeassistant' if addon_config.get('mqtt', {}).get('homeassistant_discovery', True) else '',
+                'useCamelCaseTopicNames': addon_config.get('mqtt', {}).get('camel_case_topics', True)
+            },
+            'logging': addon_config.get('logging', {})
+        }
+
+        # Add user/password if provided
+        mqtt_user = addon_config.get('mqtt', {}).get('benutzer', '')
+        mqtt_pass = addon_config.get('mqtt', {}).get('passwort', '')
+        if mqtt_user:
+            config['mqtt']['user'] = mqtt_user
+        if mqtt_pass:
+            config['mqtt']['password'] = mqtt_pass
+
+        # Add protocol file if provided
+        protocol_file = addon_config.get('allgemein', {}).get('protokoll_datei', '')
+        if protocol_file:
+            config['general']['protocolFile'] = protocol_file
+
+        # Connection configuration
+        connection_type = addon_config.get('verbindung', {}).get('typ', 'tcp')
+        if connection_type == 'tcp':
+            config['tcp'] = {
+                'ip': addon_config.get('verbindung', {}).get('tcp', {}).get('ip', '192.168.1.100'),
+                'port': addon_config.get('verbindung', {}).get('tcp', {}).get('port', 4196)
+            }
+        else:
+            config['serial'] = {
+                'device': addon_config.get('verbindung', {}).get('serial', {}).get('device', '/dev/ttyUSB0'),
+                'baudrate': addon_config.get('verbindung', {}).get('serial', {}).get('baudrate', 9600)
+            }
+
+        # Polling configuration
+        if addon_config.get('polling', {}).get('aktiviert', False):
+            config['polling'] = {
+                'fetch_interval': [],
+                'groups': {
+                    'fsv10xx': [
+                        'VAR_IN_FSV_1011', 'VAR_IN_FSV_1012', 'VAR_IN_FSV_1021', 'VAR_IN_FSV_1022',
+                        'VAR_IN_FSV_1031', 'VAR_IN_FSV_1032', 'VAR_IN_FSV_1041', 'VAR_IN_FSV_1042',
+                        'VAR_IN_FSV_1051', 'VAR_IN_FSV_1052'
+                    ],
+                    'fsv20xx': [
+                        'VAR_IN_FSV_2011', 'VAR_IN_FSV_2012', 'VAR_IN_FSV_2021', 'VAR_IN_FSV_2022',
+                        'VAR_IN_FSV_2031', 'VAR_IN_FSV_2032', 'ENUM_IN_FSV_2041', 'VAR_IN_FSV_2051',
+                        'VAR_IN_FSV_2052', 'VAR_IN_FSV_2061', 'VAR_IN_FSV_2062', 'VAR_IN_FSV_2071',
+                        'VAR_IN_FSV_2072', 'ENUM_IN_FSV_2081', 'ENUM_IN_FSV_2091', 'ENUM_IN_FSV_2092',
+                        'ENUM_IN_FSV_2093', 'ENUM_IN_FSV_2094'
+                    ],
+                    'fsv30xx': [
+                        'ENUM_IN_FSV_3011', 'VAR_IN_FSV_3021', 'VAR_IN_FSV_3022', 'VAR_IN_FSV_3023',
+                        'VAR_IN_FSV_3024', 'VAR_IN_FSV_3025', 'VAR_IN_FSV_3026', 'ENUM_IN_FSV_3031',
+                        'VAR_IN_FSV_3032', 'VAR_IN_FSV_3033', 'ENUM_IN_FSV_3041', 'ENUM_IN_FSV_3042',
+                        'VAR_IN_FSV_3043', 'VAR_IN_FSV_3044', 'VAR_IN_FSV_3045', 'VAR_IN_FSV_3046',
+                        'ENUM_IN_FSV_3051', 'VAR_IN_FSV_3052', 'ENUM_IN_FSV_3061', 'ENUM_IN_FSV_3071',
+                        'VAR_IN_FSV_3081', 'VAR_IN_FSV_3082', 'VAR_IN_FSV_3083'
+                    ],
+                    'fsv40xx': [
+                        'ENUM_IN_FSV_4011', 'VAR_IN_FSV_4012', 'VAR_IN_FSV_4013', 'ENUM_IN_FSV_4021',
+                        'ENUM_IN_FSV_4022', 'ENUM_IN_FSV_4023', 'VAR_IN_FSV_4024', 'VAR_IN_FSV_4025',
+                        'ENUM_IN_FSV_4031', 'ENUM_IN_FSV_4032', 'VAR_IN_FSV_4033', 'ENUM_IN_FSV_4041',
+                        'VAR_IN_FSV_4042', 'VAR_IN_FSV_4043', 'ENUM_IN_FSV_4044', 'VAR_IN_FSV_4045',
+                        'VAR_IN_FSV_4046', 'ENUM_IN_FSV_4051', 'VAR_IN_FSV_4052', 'ENUM_IN_FSV_4053',
+                        'ENUM_IN_FSV_4061'
+                    ],
+                    'fsv50xx': [
+                        'VAR_IN_FSV_5011', 'VAR_IN_FSV_5012', 'VAR_IN_FSV_5013', 'VAR_IN_FSV_5014',
+                        'VAR_IN_FSV_5015', 'VAR_IN_FSV_5016', 'VAR_IN_FSV_5017', 'VAR_IN_FSV_5018',
+                        'VAR_IN_FSV_5019', 'VAR_IN_FSV_5021', 'VAR_IN_FSV_5031', 'ENUM_IN_FSV_5022',
+                        'VAR_IN_FSV_5023', 'ENUM_IN_FSV_5041', 'ENUM_IN_FSV_5042', 'ENUM_IN_FSV_5043',
+                        'ENUM_IN_FSV_5051', 'ENUM_IN_FSV_5061', 'ENUM_IN_FSV_5081', 'VAR_IN_FSV_5082',
+                        'VAR_IN_FSV_5083', 'ENUM_IN_FSV_5091', 'VAR_IN_FSV_5092', 'VAR_IN_FSV_5093',
+                        'ENUM_IN_FSV_5094'
+                    ]
+                }
+            }
+            
+            # Add enabled intervals from addon config
+            for interval in addon_config.get('polling', {}).get('intervalle', []):
+                if interval.get('aktiviert', False):
+                    config['polling']['fetch_interval'].append({
+                        'name': interval['name'],
+                        'enable': True,
+                        'schedule': interval['zeitplan']
+                    })
+
+        # Save generated config to file for compatibility
+        with open(self.args.CONFIGFILE, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False)
+
+        self._load_config(config)
+
+    def _load_config(self, config):
+        """Load configuration from config dict"""
+        self.MQTT = config.get('mqtt')
+        self.GENERAL = config.get('general')
+
+        if 'tcp' in config:
+            self.TCP = config.get('tcp')
+
+        if 'serial' in config:
+            self.SERIAL = config.get('serial')
+
+        if 'logging' in config:
+            self.LOGGING = config.get('logging')
+        else:
+            self.LOGGING = {}
+
+        if 'polling' in config:
+            self.POLLING = config.get('polling')
+
+        logger.debug(f"Configuration loaded: {config}")
     
     def parse_time_string(self, time_str: str) -> int:
         match = re.match(r'^(\d+)([smh])$', time_str.strip(), re.IGNORECASE)
@@ -82,7 +196,7 @@ class EHSConfig():
              with open(self.GENERAL['nasaRepositoryFile'], mode='r') as file:
                 self.NASA_REPO = yaml.safe_load(file)
         else:
-            raise ConfigException(argument=self.GENERAL['nasaRepositoryFile'], message="NASA Respository File is missing")
+            raise ConfigException(argument=self.GENERAL['nasaRepositoryFile'], message="NASA Repository File is missing")
 
         if 'protocolFile' not in self.GENERAL:
             self.GENERAL['protocolFile'] = None
@@ -91,7 +205,7 @@ class EHSConfig():
             self.GENERAL['allowControl'] = False
 
         if self.SERIAL is None and self.TCP is None:
-            raise ConfigException(argument="", message="define tcp or serial config parms")
+            raise ConfigException(argument="", message="define tcp or serial config params")
 
         if self.SERIAL is not None and self.TCP is not None:
             raise ConfigException(argument="", message="you cannot define tcp and serial please define only one")
@@ -156,28 +270,21 @@ class EHSConfig():
         if 'password' not in self.MQTT and 'user' in self.MQTT:
             raise ConfigException(argument=self.SERIAL['device'], message="mqtt password parameter is missing")
         
-        if 'messageNotFound' not in self.LOGGING:
-            self.LOGGING['messageNotFound'] = False
-
-        if 'invalidPacket' not in self.LOGGING:
-            self.LOGGING['invalidPacket'] = False
-
-        if 'deviceAdded' not in self.LOGGING:
-            self.LOGGING['deviceAdded'] = True
-
-        if 'packetNotFromIndoorOutdoor' not in self.LOGGING:
-            self.LOGGING['packetNotFromIndoorOutdoor'] = False
-
-        if 'proccessedMessage' not in self.LOGGING:
-            self.LOGGING['proccessedMessage'] = False
-
-        if 'pollerMessage' not in self.LOGGING:
-            self.LOGGING['pollerMessage'] = False
-
-        if 'controlMessage' not in self.LOGGING:
-            self.LOGGING['controlMessage'] = False
+        # Set default logging values
+        logging_defaults = {
+            'messageNotFound': False,
+            'invalidPacket': False,
+            'deviceAdded': True,
+            'packetNotFromIndoorOutdoor': False,
+            'proccessedMessage': False,
+            'pollerMessage': False,
+            'controlMessage': False
+        }
+        
+        for key, default_value in logging_defaults.items():
+            if key not in self.LOGGING:
+                self.LOGGING[key] = default_value
 
         logger.info(f"Logging Config:")
         for key, value in self.LOGGING.items():
             logger.info(f"    {key}: {value}")
-        

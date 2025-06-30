@@ -1,22 +1,16 @@
 configuration:
   verbindung:
     name: "Verbindung"
-    description: "Verbindungseinstellungen zur Samsung EHS"
+    description: "Konfiguration der Verbindung zur Wärmepumpe"
   verbindung.typ:
     name: "Verbindungstyp"
-    description: "Art der Verbindung zur Wärmepumpe"
-  verbindung.tcp:
-    name: "TCP Verbindung"
-    description: "Einstellungen für TCP/IP Verbindung (RS485-zu-Ethernet Adapter)"
+    description: "Wählen Sie zwischen TCP (RS485-zu-Ethernet) oder Serial (USB-RS485)"
   verbindung.tcp.ip:
     name: "IP-Adresse"
     description: "IP-Adresse des RS485-zu-Ethernet Adapters"
   verbindung.tcp.port:
     name: "Port"
     description: "Port des RS485-zu-Ethernet Adapters"
-  verbindung.serial:
-    name: "Serielle Verbindung"
-    description: "Einstellungen für serielle Verbindung (USB-RS485 Adapter)"
   verbindung.serial.device:
     name: "Gerätepfad"
     description: "Pfad zum seriellen Gerät (z.B. /dev/ttyUSB0)"
@@ -25,7 +19,7 @@ configuration:
     description: "Baudrate für die serielle Verbindung"
   mqtt:
     name: "MQTT"
-    description: "MQTT Broker Einstellungen"
+    description: "MQTT Broker Konfiguration"
   mqtt.broker_url:
     name: "Broker URL"
     description: "URL oder IP-Adresse des MQTT Brokers"
@@ -40,55 +34,52 @@ configuration:
     description: "MQTT Passwort (optional)"
   mqtt.client_id:
     name: "Client ID"
-    description: "MQTT Client Identifikation"
+    description: "MQTT Client ID"
   mqtt.topic_prefix:
     name: "Topic Präfix"
     description: "Präfix für MQTT Topics"
   mqtt.homeassistant_discovery:
     name: "Home Assistant Auto-Discovery"
-    description: "Aktiviert die automatische Erkennung in Home Assistant"
+    description: "Aktiviert automatische Geräteerkennung in Home Assistant"
   mqtt.camel_case_topics:
-    name: "CamelCase Topics"
-    description: "Verwendet CamelCase für Topic-Namen"
+    name: "CamelCase Topic Namen"
+    description: "Verwendet CamelCase für Topic Namen"
   allgemein:
     name: "Allgemeine Einstellungen"
-    description: "Grundlegende Konfigurationsoptionen"
+    description: "Allgemeine Konfiguration"
   allgemein.steuerung_erlauben:
     name: "Steuerung erlauben"
-    description: "WARNUNG: Erlaubt die Steuerung der Wärmepumpe über Home Assistant"
+    description: "⚠️ WARNUNG: Ermöglicht die Steuerung der Wärmepumpe (auf eigene Gefahr)"
   allgemein.protokoll_datei:
-    name: "Protokoll-Datei"
-    description: "Pfad zur Protokoll-Datei (optional, für Debugging)"
+    name: "Protokoll Datei"
+    description: "Pfad zur Protokoll Datei (optional)"
   logging:
     name: "Protokollierung"
-    description: "Einstellungen für die Protokollausgabe"
+    description: "Einstellungen für die Protokollierung"
   logging.geraet_hinzugefuegt:
     name: "Gerät hinzugefügt"
-    description: "Protokolliert wenn neue Geräte erkannt werden"
+    description: "Protokolliert wenn neue Geräte hinzugefügt werden"
   logging.nachricht_nicht_gefunden:
     name: "Nachricht nicht gefunden"
-    description: "Protokolliert unbekannte Nachrichten"
+    description: "Protokolliert wenn Nachrichten nicht im Repository gefunden werden"
   logging.paket_nicht_von_innen_aussen:
     name: "Paket nicht von Innen/Außen"
-    description: "Protokolliert Pakete die nicht von der Wärmepumpe stammen"
+    description: "Protokolliert Pakete die nicht von Innen- oder Außeneinheit stammen"
   logging.verarbeitete_nachricht:
     name: "Verarbeitete Nachricht"
-    description: "Protokolliert alle verarbeiteten Nachrichten"
+    description: "Protokolliert verarbeitete Nachrichten"
   logging.poller_nachricht:
     name: "Poller Nachricht"
-    description: "Protokolliert Polling-Nachrichten"
+    description: "Protokolliert Poller Nachrichten"
   logging.steuerungs_nachricht:
-    name: "Steuerungs-Nachricht"
-    description: "Protokolliert Steuerungsbefehle"
+    name: "Steuerungs Nachricht"
+    description: "Protokolliert Steuerungsnachrichten"
   logging.ungueltiges_paket:
     name: "Ungültiges Paket"
-    description: "Protokolliert ungültige Datenpakete"
+    description: "Protokolliert ungültige Pakete"
   polling:
     name: "Polling"
-    description: "Aktive Abfrage von Werten"
+    description: "⚠️ WARNUNG: Aktive Abfrage von Werten (auf eigene Gefahr)"
   polling.aktiviert:
     name: "Polling aktiviert"
-    description: "WARNUNG: Aktiviert die aktive Abfrage von Werten"
-  polling.intervalle:
-    name: "Polling-Intervalle"
-    description: "Konfiguration der Abfrage-Intervalle"
+    description: "Aktiviert die aktive Abfrage von Werten"

@@ -1,22 +1,16 @@
 configuration:
   verbindung:
     name: "Connection"
-    description: "Connection settings to Samsung EHS"
+    description: "Heat pump connection configuration"
   verbindung.typ:
     name: "Connection Type"
-    description: "Type of connection to the heat pump"
-  verbindung.tcp:
-    name: "TCP Connection"
-    description: "Settings for TCP/IP connection (RS485-to-Ethernet adapter)"
+    description: "Choose between TCP (RS485-to-Ethernet) or Serial (USB-RS485)"
   verbindung.tcp.ip:
     name: "IP Address"
     description: "IP address of the RS485-to-Ethernet adapter"
   verbindung.tcp.port:
     name: "Port"
     description: "Port of the RS485-to-Ethernet adapter"
-  verbindung.serial:
-    name: "Serial Connection"
-    description: "Settings for serial connection (USB-RS485 adapter)"
   verbindung.serial.device:
     name: "Device Path"
     description: "Path to serial device (e.g. /dev/ttyUSB0)"
@@ -25,7 +19,7 @@ configuration:
     description: "Baudrate for serial connection"
   mqtt:
     name: "MQTT"
-    description: "MQTT Broker Settings"
+    description: "MQTT broker configuration"
   mqtt.broker_url:
     name: "Broker URL"
     description: "URL or IP address of MQTT broker"
@@ -40,55 +34,52 @@ configuration:
     description: "MQTT password (optional)"
   mqtt.client_id:
     name: "Client ID"
-    description: "MQTT client identification"
+    description: "MQTT client ID"
   mqtt.topic_prefix:
     name: "Topic Prefix"
     description: "Prefix for MQTT topics"
   mqtt.homeassistant_discovery:
     name: "Home Assistant Auto-Discovery"
-    description: "Enables automatic discovery in Home Assistant"
+    description: "Enables automatic device discovery in Home Assistant"
   mqtt.camel_case_topics:
-    name: "CamelCase Topics"
-    description: "Uses CamelCase for topic names"
+    name: "CamelCase Topic Names"
+    description: "Use CamelCase for topic names"
   allgemein:
     name: "General Settings"
-    description: "Basic configuration options"
+    description: "General configuration"
   allgemein.steuerung_erlauben:
     name: "Allow Control"
-    description: "WARNING: Allows control of heat pump via Home Assistant"
+    description: "⚠️ WARNING: Enables heat pump control (at your own risk)"
   allgemein.protokoll_datei:
     name: "Protocol File"
-    description: "Path to protocol file (optional, for debugging)"
+    description: "Path to protocol file (optional)"
   logging:
     name: "Logging"
-    description: "Settings for log output"
+    description: "Logging configuration"
   logging.geraet_hinzugefuegt:
     name: "Device Added"
-    description: "Logs when new devices are detected"
+    description: "Log when new devices are added"
   logging.nachricht_nicht_gefunden:
     name: "Message Not Found"
-    description: "Logs unknown messages"
+    description: "Log when messages are not found in repository"
   logging.paket_nicht_von_innen_aussen:
     name: "Packet Not From Indoor/Outdoor"
-    description: "Logs packets not from heat pump"
+    description: "Log packets not from indoor or outdoor unit"
   logging.verarbeitete_nachricht:
     name: "Processed Message"
-    description: "Logs all processed messages"
+    description: "Log processed messages"
   logging.poller_nachricht:
     name: "Poller Message"
-    description: "Logs polling messages"
+    description: "Log poller messages"
   logging.steuerungs_nachricht:
     name: "Control Message"
-    description: "Logs control commands"
+    description: "Log control messages"
   logging.ungueltiges_paket:
     name: "Invalid Packet"
-    description: "Logs invalid data packets"
+    description: "Log invalid packets"
   polling:
     name: "Polling"
-    description: "Active polling of values"
+    description: "⚠️ WARNING: Active polling of values (at your own risk)"
   polling.aktiviert:
     name: "Polling Enabled"
-    description: "WARNING: Enables active polling of values"
-  polling.intervalle:
-    name: "Polling Intervals"
-    description: "Configuration of polling intervals"
+    description: "Enables active polling of values"
