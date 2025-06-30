@@ -102,4 +102,4 @@ devices:
   - /dev/ttyACM1
 services:
   - mqtt:need
-image: "ghcr.io/echoDaveD/ehs-sentinel-addon"
+image: "ghcr.io/dafreeze01/ehs-sentinel-addon"
