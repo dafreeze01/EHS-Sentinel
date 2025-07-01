@@ -1,0 +1,153 @@
+# Erweiterte Korrelationsdiagramme für Energieanalyse
+# Zeigt Zusammenhänge zwischen verschiedenen Parametern
+
+type: vertical-stack
+cards:
+  # Temperatur vs. Energieverbrauch Korrelation
+  - type: custom:plotly-graph
+    title: "📊 Temperatur vs. Energieverbrauch Korrelation"
+    entities:
+      - entity: sensor.samsung_ehssentinel_outdoorouttemp
+        name: "Außentemperatur"
+        yaxis: "y1"
+      - entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunit
+        name: "Energieverbrauch"
+        yaxis: "y2"
+      - entity: sensor.samsung_ehssentinel_ehssentinelheatoutput
+        name: "Heizleistung"
+        yaxis: "y2"
+    hours_to_show: 48
+    refresh_interval: 300
+    layout:
+      title:
+        text: "Energieeffizienz-Analyse"
+        font:
+          size: 16
+      xaxis:
+        title: "Zeit"
+        showgrid: true
+      yaxis:
+        title: "Temperatur (°C)"
+        side: "left"
+        showgrid: true
+        color: "#1f77b4"
+      yaxis2:
+        title: "Leistung (W)"
+        side: "right"
+        overlaying: "y"
+        showgrid: false
+        color: "#ff7f0e"
+      legend:
+        orientation: "h"
+        y: -0.2
+      annotations:
+        - text: "Niedrige Außentemperatur = Höherer Energieverbrauch"
+          showarrow: false
+          x: 0.5
+          y: 1.1
+          xref: "paper"
+          yref: "paper"
+          font:
+            size: 12
+            color: "#666"
+    config:
+      scrollZoom: true
+      displayModeBar: true
+
+  # PV-Einfluss auf Warmwasserbereitung
+  - type: custom:plotly-graph
+    title: "☀️ PV-Einfluss auf Warmwasserbereitung"
+    entities:
+      - entity: binary_sensor.samsung_ehssentinel_pvcontactstate
+        name: "PV Status"
+        yaxis: "y1"
+      - entity: sensor.samsung_ehssentinel_indoordhwcurrenttemp
+        name: "Warmwassertemperatur"
+        yaxis: "y2"
+      - entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunit
+        name: "Energieverbrauch"
+        yaxis: "y3"
+    hours_to_show: 24
+    refresh_interval: 300
+    layout:
+      title:
+        text: "PV-Optimierung Analyse"
+        font:
+          size: 16
+      xaxis:
+        title: "Zeit"
+        showgrid: true
+      yaxis:
+        title: "PV Status"
+        side: "left"
+        showgrid: true
+        color: "#ff9500"
+        range: [0, 1]
+      yaxis2:
+        title: "Temperatur (°C)"
+        side: "right"
+        overlaying: "y"
+        showgrid: false
+        color: "#d62728"
+      yaxis3:
+        title: "Energieverbrauch (W)"
+        side: "right"
+        overlaying: "y"
+        position: 0.95
+        showgrid: false
+        color: "#2ca02c"
+      annotations:
+        - text: "PV aktiv"
+          showarrow: true
+          arrowcolor: "orange"
+          arrowwidth: 2
+          x: "2024-01-01 12:00:00"
+          y: 1
+          ax: 0
+          ay: -30
+    config:
+      scrollZoom: true
+
+  # COP vs. Außentemperatur
+  - type: custom:plotly-graph
+    title: "📈 COP vs. Außentemperatur"
+    entities:
+      - entity: sensor.samsung_ehssentinel_outdoorouttemp
+        name: "Außentemperatur"
+        yaxis: "y1"
+      - entity: sensor.samsung_ehssentinel_ehssentinelcop
+        name: "COP"
+        yaxis: "y2"
+    hours_to_show: 48
+    refresh_interval: 300
+    layout:
+      title:
+        text: "Effizienz-Analyse"
+        font:
+          size: 16
+      xaxis:
+        title: "Zeit"
+        showgrid: true
+      yaxis:
+        title: "Außentemperatur (°C)"
+        side: "left"
+        showgrid: true
+        color: "#1f77b4"
+      yaxis2:
+        title: "COP"
+        side: "right"
+        overlaying: "y"
+        showgrid: false
+        color: "#ff7f0e"
+      annotations:
+        - text: "Höhere Außentemperatur = Besserer COP"
+          showarrow: false
+          x: 0.5
+          y: 1.1
+          xref: "paper"
+          yref: "paper"
+          font:
+            size: 12
+            color: "#666"
+    config:
+      scrollZoom: true

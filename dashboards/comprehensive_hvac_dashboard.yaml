@@ -1,0 +1,806 @@
+# Umfassendes HVAC System Dashboard für EHS-Sentinel
+# Vollständige deutsche Benutzeroberfläche mit erweiterten Funktionen
+
+title: "🏠 EHS Wärmepumpen-Steuerung"
+views:
+  # ===== HAUPTÜBERSICHT =====
+  - title: "📊 Hauptübersicht"
+    type: sections
+    max_columns: 4
+    subview: false
+    sections:
+      # Aktuelle Werte Panel
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: select.samsung_ehssentinel_power
+                name: "🔌 Wärmepumpe"
+                secondary_info: last-updated
+                icon: mdi:power
+                tap_action:
+                  action: more-info
+              - entity: select.samsung_ehssentinel_indooropmode
+                name: "⚙️ Betriebsmodus"
+                secondary_info: last-updated
+                icon: mdi:thermostat
+              - entity: sensor.samsung_ehssentinel_outdooroperationstatus
+                name: "📊 Aktueller Status"
+                secondary_info: last-updated
+                icon: mdi:information-outline
+              - entity: binary_sensor.samsung_ehssentinel_dhwpower
+                name: "🚿 Warmwasser"
+                secondary_info: last-updated
+                icon: mdi:water-boiler
+              - entity: binary_sensor.samsung_ehssentinel_controlsilence
+                name: "🔇 Leiser Modus"
+                secondary_info: last-updated
+                icon: mdi:volume-off
+            title: "🎛️ Systemsteuerung"
+            show_header_toggle: false
+            state_color: true
+        column_span: 1
+
+      # Temperaturen Panel
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdoortw2temp
+                name: "🌡️ Vorlauftemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-chevron-up
+              - entity: sensor.samsung_ehssentinel_outdoortw1temp
+                name: "🌡️ Rücklauftemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-chevron-down
+              - entity: sensor.samsung_ehssentinel_outdoorouttemp
+                name: "🌡️ Außentemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer
+              - entity: sensor.samsung_ehssentinel_indoordhwcurrenttemp
+                name: "🌡️ Warmwassertemperatur"
+                secondary_info: last-updated
+                icon: mdi:water-thermometer
+              - entity: number.samsung_ehssentinel_intempwaterlawtargetf
+                name: "🎯 Heizkurve Zielwert"
+                secondary_info: last-updated
+                icon: mdi:chart-line
+            title: "🌡️ Temperaturen"
+            show_header_toggle: false
+            state_color: true
+        column_span: 1
+
+      # Leistung & Effizienz Panel
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_ehssentinelheatoutput
+                name: "🔥 Heizleistung"
+                secondary_info: last-updated
+                icon: mdi:fire
+              - entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunit
+                name: "⚡ Stromverbrauch"
+                secondary_info: last-updated
+                icon: mdi:lightning-bolt
+              - entity: sensor.samsung_ehssentinel_ehssentinelcop
+                name: "📈 COP (aktuell)"
+                secondary_info: last-updated
+                icon: mdi:chart-line-variant
+              - entity: sensor.samsung_ehssentinel_ehssentineltotalcop
+                name: "📊 COP (gesamt)"
+                secondary_info: last-updated
+                icon: mdi:chart-areaspline
+              - entity: sensor.samsung_ehssentinel_inflowsensorcalc
+                name: "💧 Wasserdurchfluss"
+                secondary_info: last-updated
+                icon: mdi:water-pump
+            title: "⚡ Leistung & Effizienz"
+            show_header_toggle: false
+            state_color: true
+        column_span: 1
+
+      # Kompressor & Lüfter Panel
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdoorcomp1targethz
+                name: "🎯 Kompressor Zielfrequenz"
+                secondary_info: last-updated
+                icon: mdi:sine-wave
+              - entity: sensor.samsung_ehssentinel_outdoorcomp1runhz
+                name: "⚡ Kompressor Istfrequenz"
+                secondary_info: last-updated
+                icon: mdi:waveform
+              - entity: sensor.samsung_ehssentinel_outdoorcomp1orderhz
+                name: "📋 Kompressor Sollfrequenz"
+                secondary_info: last-updated
+                icon: mdi:chart-timeline-variant
+              - entity: sensor.samsung_ehssentinel_outdoorfanrpm1
+                name: "🌪️ Außenlüfter Drehzahl"
+                secondary_info: last-updated
+                icon: mdi:fan
+            title: "🔧 Kompressor & Lüfter"
+            show_header_toggle: false
+            state_color: true
+        column_span: 1
+
+      # 48-Stunden Verlaufsdiagramme
+      - type: grid
+        cards:
+          - type: history-graph
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdoortw2temp
+                name: "Vorlauf"
+                color: "#ff6b6b"
+              - entity: sensor.samsung_ehssentinel_outdoortw1temp
+                name: "Rücklauf"
+                color: "#4ecdc4"
+              - entity: sensor.samsung_ehssentinel_outdoorouttemp
+                name: "Außen"
+                color: "#45b7d1"
+            title: "🌡️ Temperaturverlauf (48h)"
+            hours_to_show: 48
+            refresh_interval: 60
+            grid_options:
+              columns: full
+              rows: 8
+          
+          - type: history-graph
+            entities:
+              - entity: sensor.samsung_ehssentinel_ehssentinelheatoutput
+                name: "Heizleistung"
+                color: "#ff9f43"
+              - entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunit
+                name: "Stromverbrauch"
+                color: "#feca57"
+              - entity: sensor.samsung_ehssentinel_ehssentinelcop
+                name: "COP"
+                color: "#48dbfb"
+            title: "⚡ Leistungsverlauf (48h)"
+            hours_to_show: 48
+            refresh_interval: 60
+            grid_options:
+              columns: full
+              rows: 8
+          
+          - type: history-graph
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdoorcomp1runhz
+                name: "Kompressor"
+                color: "#0abde3"
+              - entity: sensor.samsung_ehssentinel_outdoorfanrpm1
+                name: "Lüfter"
+                color: "#006ba6"
+            title: "🔧 Maschinenverlauf (48h)"
+            hours_to_show: 48
+            refresh_interval: 60
+            grid_options:
+              columns: full
+              rows: 8
+        column_span: 4
+
+      # Korrelationsdiagramme
+      - type: grid
+        cards:
+          - type: custom:plotly-graph
+            title: "📊 Temperatur vs. Energieverbrauch"
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdoorouttemp
+                name: "Außentemperatur"
+              - entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunit
+                name: "Energieverbrauch"
+            hours_to_show: 48
+            refresh_interval: 300
+            layout:
+              xaxis:
+                title: "Außentemperatur (°C)"
+              yaxis:
+                title: "Energieverbrauch (W)"
+              showlegend: true
+            config:
+              scrollZoom: true
+            grid_options:
+              columns: 2
+              rows: 6
+          
+          - type: custom:plotly-graph
+            title: "☀️ PV-Einfluss auf Warmwasserbereitung"
+            entities:
+              - entity: binary_sensor.samsung_ehssentinel_pvcontactstate
+                name: "PV Status"
+              - entity: sensor.samsung_ehssentinel_indoordhwcurrenttemp
+                name: "Warmwassertemperatur"
+            hours_to_show: 48
+            refresh_interval: 300
+            layout:
+              annotations:
+                - text: "PV aktiv"
+                  showarrow: true
+                  arrowcolor: "orange"
+            grid_options:
+              columns: 2
+              rows: 6
+        column_span: 4
+
+  # ===== HEIZUNGSSTEUERUNG =====
+  - title: "🔥 Heizung"
+    type: sections
+    max_columns: 3
+    path: heizung
+    icon: mdi:radiator
+    sections:
+      # Grundeinstellungen Heizung
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: number.samsung_ehssentinel_intempwaterlawtargetf
+                name: "🎯 Heizkurve Zieltemperatur"
+                secondary_info: last-updated
+                icon: mdi:chart-line
+                tap_action:
+                  action: more-info
+                  haptic: light
+              - entity: number.samsung_ehssentinel_infsv1031
+                name: "🌡️ Max. Vorlauftemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-high
+              - entity: number.samsung_ehssentinel_infsv1032
+                name: "🌡️ Min. Vorlauftemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-low
+              - entity: number.samsung_ehssentinel_infsv1041
+                name: "🏠 Max. Raumtemperatur"
+                secondary_info: last-updated
+                icon: mdi:home-thermometer
+              - entity: number.samsung_ehssentinel_infsv1042
+                name: "🏠 Min. Raumtemperatur"
+                secondary_info: last-updated
+                icon: mdi:home-thermometer-outline
+            title: "🎛️ Grundeinstellungen Heizung"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # Wassergesetz (Water Law)
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: number.samsung_ehssentinel_infsv2011
+                name: "🌡️ Außentemp. WL Max."
+                secondary_info: last-updated
+                icon: mdi:thermometer-plus
+              - entity: number.samsung_ehssentinel_infsv2012
+                name: "🌡️ Außentemp. WL Min."
+                secondary_info: last-updated
+                icon: mdi:thermometer-minus
+              - entity: select.samsung_ehssentinel_infsv2041
+                name: "🔄 WL Auswahl"
+                secondary_info: last-updated
+                icon: mdi:swap-horizontal
+              - entity: number.samsung_ehssentinel_infsv2021
+                name: "🌡️ UFH/WL1 Max."
+                secondary_info: last-updated
+                icon: mdi:heating-coil
+              - entity: number.samsung_ehssentinel_infsv2022
+                name: "🌡️ UFH/WL1 Min."
+                secondary_info: last-updated
+                icon: mdi:heating-coil
+              - entity: number.samsung_ehssentinel_infsv2031
+                name: "🌡️ FCU/WL2 Max."
+                secondary_info: last-updated
+                icon: mdi:air-conditioner
+              - entity: number.samsung_ehssentinel_infsv2032
+                name: "🌡️ FCU/WL2 Min."
+                secondary_info: last-updated
+                icon: mdi:air-conditioner
+            title: "📏 Wassergesetz (WL)"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # Erweiterte Heizungssteuerung
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: select.samsung_ehssentinel_infsv4011
+                name: "⚖️ Heizung/DHW Priorität"
+                secondary_info: last-updated
+                icon: mdi:scale-balance
+              - entity: number.samsung_ehssentinel_infsv4012
+                name: "🌡️ Außentemp. für Priorität"
+                secondary_info: last-updated
+                icon: mdi:thermometer
+              - entity: number.samsung_ehssentinel_infsv4013
+                name: "🌡️ Heizung AUS Temperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-off
+              - entity: select.samsung_ehssentinel_infsv2091
+                name: "🏠 Thermostat UFH"
+                secondary_info: last-updated
+                icon: mdi:thermostat
+              - entity: select.samsung_ehssentinel_infsv2092
+                name: "🏠 Thermostat FCU"
+                secondary_info: last-updated
+                icon: mdi:thermostat-box
+            title: "⚙️ Erweiterte Steuerung"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+  # ===== KÜHLUNGSSTEUERUNG =====
+  - title: "❄️ Kühlung"
+    type: sections
+    max_columns: 3
+    path: kuehlung
+    icon: mdi:snowflake
+    sections:
+      # Grundeinstellungen Kühlung
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: number.samsung_ehssentinel_infsv1011
+                name: "🌡️ Max. Vorlauftemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-high
+              - entity: number.samsung_ehssentinel_infsv1012
+                name: "🌡️ Min. Vorlauftemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-low
+              - entity: number.samsung_ehssentinel_infsv1021
+                name: "🏠 Max. Raumtemperatur"
+                secondary_info: last-updated
+                icon: mdi:home-thermometer
+              - entity: number.samsung_ehssentinel_infsv1022
+                name: "🏠 Min. Raumtemperatur"
+                secondary_info: last-updated
+                icon: mdi:home-thermometer-outline
+            title: "🎛️ Grundeinstellungen Kühlung"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # Kühl-Wassergesetz
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: number.samsung_ehssentinel_infsv2051
+                name: "🌡️ Außentemp. WL Max."
+                secondary_info: last-updated
+                icon: mdi:thermometer-plus
+              - entity: number.samsung_ehssentinel_infsv2052
+                name: "🌡️ Außentemp. WL Min."
+                secondary_info: last-updated
+                icon: mdi:thermometer-minus
+              - entity: select.samsung_ehssentinel_infsv2081
+                name: "🔄 WL Auswahl"
+                secondary_info: last-updated
+                icon: mdi:swap-horizontal
+              - entity: number.samsung_ehssentinel_infsv2061
+                name: "🌡️ UFH/WL1 Max."
+                secondary_info: last-updated
+                icon: mdi:snowflake
+              - entity: number.samsung_ehssentinel_infsv2062
+                name: "🌡️ UFH/WL1 Min."
+                secondary_info: last-updated
+                icon: mdi:snowflake-variant
+              - entity: number.samsung_ehssentinel_infsv2071
+                name: "🌡️ FCU/WL2 Max."
+                secondary_info: last-updated
+                icon: mdi:air-conditioner
+              - entity: number.samsung_ehssentinel_infsv2072
+                name: "🌡️ FCU/WL2 Min."
+                secondary_info: last-updated
+                icon: mdi:air-conditioner
+            title: "📏 Kühl-Wassergesetz"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # Abwesenheitsmodus Kühlung
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: number.samsung_ehssentinel_infsv5011
+                name: "🌡️ Vorlauftemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer
+              - entity: number.samsung_ehssentinel_infsv5012
+                name: "🏠 Raumtemperatur"
+                secondary_info: last-updated
+                icon: mdi:home-thermometer
+              - entity: number.samsung_ehssentinel_infsv5015
+                name: "🌡️ Auto WL1 Temp."
+                secondary_info: last-updated
+                icon: mdi:auto-fix
+              - entity: number.samsung_ehssentinel_infsv5016
+                name: "🌡️ Auto WL2 Temp."
+                secondary_info: last-updated
+                icon: mdi:auto-fix
+            title: "🏃‍♂️ Abwesenheitsmodus"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+  # ===== WARMWASSERSTEUERUNG =====
+  - title: "🚿 Warmwasser"
+    type: sections
+    max_columns: 3
+    path: warmwasser
+    icon: mdi:water-boiler
+    sections:
+      # Grundeinstellungen Warmwasser
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: select.samsung_ehssentinel_infsv3011
+                name: "🚿 DHW aktiviert"
+                secondary_info: last-updated
+                icon: mdi:water-boiler
+              - entity: number.samsung_ehssentinel_infsv1051
+                name: "🌡️ Max. Tanktemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-high
+              - entity: number.samsung_ehssentinel_infsv1052
+                name: "🌡️ Min. Tanktemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-low
+              - entity: number.samsung_ehssentinel_infsv3021
+                name: "🌡️ WP Max. Temperatur"
+                secondary_info: last-updated
+                icon: mdi:heat-pump
+              - entity: number.samsung_ehssentinel_infsv3022
+                name: "🌡️ WP Stopp"
+                secondary_info: last-updated
+                icon: mdi:stop
+              - entity: number.samsung_ehssentinel_infsv3023
+                name: "🌡️ WP Start"
+                secondary_info: last-updated
+                icon: mdi:play
+            title: "🎛️ Grundeinstellungen"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # Betriebszeiten
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: number.samsung_ehssentinel_infsv3024
+                name: "⏱️ Min. Heizzeit"
+                secondary_info: last-updated
+                icon: mdi:timer-outline
+              - entity: number.samsung_ehssentinel_infsv3025
+                name: "⏱️ Max. DHW Zeit"
+                secondary_info: last-updated
+                icon: mdi:timer
+              - entity: number.samsung_ehssentinel_infsv3026
+                name: "⏱️ Max. Heizzeit"
+                secondary_info: last-updated
+                icon: mdi:timer-plus
+              - entity: select.samsung_ehssentinel_infsv3051
+                name: "⏰ Zwangs-AUS Funktion"
+                secondary_info: last-updated
+                icon: mdi:timer-off
+              - entity: number.samsung_ehssentinel_infsv3052
+                name: "⏱️ Zwangs-AUS Dauer"
+                secondary_info: last-updated
+                icon: mdi:timer-sand
+            title: "⏱️ Betriebszeiten"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # PV-Optimierung für Warmwasser
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: binary_sensor.samsung_ehssentinel_pvcontactstate
+                name: "☀️ PV Kontakt Status"
+                secondary_info: last-updated
+                icon: mdi:solar-panel
+              - entity: select.samsung_ehssentinel_infsv5081
+                name: "☀️ PV Steuerung aktiviert"
+                secondary_info: last-updated
+                icon: mdi:solar-power
+              - entity: number.samsung_ehssentinel_infsv5082
+                name: "🌡️ PV Temp.-Shift Kühlung"
+                secondary_info: last-updated
+                icon: mdi:thermometer-chevron-down
+              - entity: number.samsung_ehssentinel_infsv5083
+                name: "🌡️ PV Temp.-Shift Heizung"
+                secondary_info: last-updated
+                icon: mdi:thermometer-chevron-up
+            title: "☀️ PV-Optimierung"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # Warmwasser Verlaufsdiagramm
+      - type: grid
+        cards:
+          - type: history-graph
+            entities:
+              - entity: sensor.samsung_ehssentinel_indoordhwcurrenttemp
+                name: "Warmwassertemperatur"
+                color: "#ff6b6b"
+              - entity: binary_sensor.samsung_ehssentinel_pvcontactstate
+                name: "PV Status"
+                color: "#ffa500"
+            title: "🚿 Warmwasser & PV-Einfluss (24h)"
+            hours_to_show: 24
+            refresh_interval: 300
+            grid_options:
+              columns: full
+              rows: 6
+        column_span: 3
+
+  # ===== INTELLIGENTE STEUERUNG =====
+  - title: "🧠 Smart Control"
+    type: sections
+    max_columns: 3
+    path: smart-control
+    icon: mdi:brain
+    sections:
+      # Smart Grid Ready
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: select.samsung_ehssentinel_sgreadymodestate
+                name: "🏠 Smart Grid Ready Modus"
+                secondary_info: last-updated
+                icon: mdi:home-lightning-bolt
+              - entity: select.samsung_ehssentinel_infsv5091
+                name: "⚡ Smart Grid aktiviert"
+                secondary_info: last-updated
+                icon: mdi:transmission-tower
+              - entity: number.samsung_ehssentinel_infsv5092
+                name: "🌡️ Temp.-Shift Heizung"
+                secondary_info: last-updated
+                icon: mdi:thermometer-chevron-up
+              - entity: number.samsung_ehssentinel_infsv5093
+                name: "🌡️ Temp.-Shift DHW"
+                secondary_info: last-updated
+                icon: mdi:water-thermometer
+              - entity: select.samsung_ehssentinel_infsv5094
+                name: "🚿 DHW Modus"
+                secondary_info: last-updated
+                icon: mdi:water-boiler-auto
+            title: "🏠 Smart Grid Ready"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # PV-Steuerung
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: binary_sensor.samsung_ehssentinel_pvcontactstate
+                name: "☀️ PV Kontakt Status"
+                secondary_info: last-updated
+                icon: mdi:solar-panel
+              - entity: select.samsung_ehssentinel_infsv5081
+                name: "☀️ PV Steuerung aktiviert"
+                secondary_info: last-updated
+                icon: mdi:solar-power
+              - entity: number.samsung_ehssentinel_infsv5082
+                name: "🌡️ Temp.-Shift Kühlung"
+                secondary_info: last-updated
+                icon: mdi:snowflake
+              - entity: number.samsung_ehssentinel_infsv5083
+                name: "🌡️ Temp.-Shift Heizung"
+                secondary_info: last-updated
+                icon: mdi:fire
+            title: "☀️ PV-Steuerung"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+      # Leistungssteuerung
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: select.samsung_ehssentinel_infsv5041
+                name: "⚡ Leistungsspitzensteuerung"
+                secondary_info: last-updated
+                icon: mdi:chart-line
+              - entity: select.samsung_ehssentinel_infsv5042
+                name: "🔌 Zwangsabschaltung"
+                secondary_info: last-updated
+                icon: mdi:power-off
+              - entity: select.samsung_ehssentinel_infsv5043
+                name: "⚡ Eingangsspannung"
+                secondary_info: last-updated
+                icon: mdi:sine-wave
+              - entity: select.samsung_ehssentinel_infsv5051
+                name: "📊 Frequenzverhältnis"
+                secondary_info: last-updated
+                icon: mdi:waveform
+            title: "⚡ Leistungssteuerung"
+            state_color: true
+            show_header_toggle: false
+        column_span: 1
+
+  # ===== SYSTEM-INFORMATIONEN =====
+  - title: "ℹ️ System Info"
+    type: sections
+    max_columns: 2
+    path: system-info
+    icon: mdi:information
+    sections:
+      # Geräteinformationen
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_stroutdoormodelname
+                name: "🏭 Außeneinheit Modell"
+                secondary_info: last-updated
+                icon: mdi:factory
+              - entity: sensor.samsung_ehssentinel_strindoormodelname
+                name: "🏠 Inneneinheit Modell"
+                secondary_info: last-updated
+                icon: mdi:home
+              - entity: sensor.samsung_ehssentinel_strserialnumber
+                name: "🔢 Seriennummer"
+                secondary_info: last-updated
+                icon: mdi:barcode
+              - entity: sensor.samsung_ehssentinel_strmanufacturedate
+                name: "📅 Herstellungsdatum"
+                secondary_info: last-updated
+                icon: mdi:calendar-clock
+              - entity: sensor.samsung_ehssentinel_strinstallationdate
+                name: "📅 Installationsdatum"
+                secondary_info: last-updated
+                icon: mdi:calendar-check
+            title: "🏭 Geräteinformationen"
+            show_header_toggle: false
+        column_span: 1
+
+      # Software & Firmware
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_strsoftwareversion
+                name: "💾 Software Version"
+                secondary_info: last-updated
+                icon: mdi:application
+              - entity: sensor.samsung_ehssentinel_strfirmwareversion
+                name: "🔧 Firmware Version"
+                secondary_info: last-updated
+                icon: mdi:chip
+              - entity: sensor.samsung_ehssentinel_inminutessinceinstallation
+                name: "⏱️ Betriebszeit seit Installation"
+                secondary_info: last-updated
+                icon: mdi:clock-time-eight
+              - entity: sensor.samsung_ehssentinel_inminutesactive
+                name: "⏱️ Aktive Betriebszeit"
+                secondary_info: last-updated
+                icon: mdi:clock-check
+            title: "💾 Software & Betriebszeit"
+            show_header_toggle: false
+        column_span: 1
+
+      # Energiestatistiken
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_intotalgeneratedpower
+                name: "⚡ Gesamt erzeugte Energie"
+                secondary_info: last-updated
+                icon: mdi:lightning-bolt-circle
+              - entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunitaccum
+                name: "⚡ Gesamt verbrauchte Energie"
+                secondary_info: last-updated
+                icon: mdi:counter
+              - entity: sensor.samsung_ehssentinel_ingeneratedpowerlastminute
+                name: "⚡ Leistung letzte Minute"
+                secondary_info: last-updated
+                icon: mdi:flash
+              - entity: sensor.samsung_ehssentinel_ehssentineltotalcop
+                name: "📊 Gesamt COP"
+                secondary_info: last-updated
+                icon: mdi:chart-areaspline
+            title: "📈 Energiestatistiken"
+            show_header_toggle: false
+        column_span: 2
+
+  # ===== DIAGNOSE & WARTUNG =====
+  - title: "🔍 Diagnose"
+    type: sections
+    max_columns: 3
+    path: diagnose
+    icon: mdi:stethoscope
+    sections:
+      # Betriebsstatus
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdooroperationstatus
+                name: "📊 Betriebsstatus"
+                secondary_info: last-updated
+                icon: mdi:information-outline
+              - entity: sensor.samsung_ehssentinel_outdoordefroststep
+                name: "❄️ Abtau-Status"
+                secondary_info: last-updated
+                icon: mdi:snowflake-melt
+              - entity: binary_sensor.samsung_ehssentinel_controlsilence
+                name: "🔇 Leiser Modus"
+                secondary_info: last-updated
+                icon: mdi:volume-off
+            title: "📊 Aktueller Status"
+            show_header_toggle: false
+            state_color: true
+        column_span: 1
+
+      # Kompressor Details
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdoorcomp1targethz
+                name: "🎯 Zielfrequenz"
+                secondary_info: last-updated
+                icon: mdi:target
+              - entity: sensor.samsung_ehssentinel_outdoorcomp1runhz
+                name: "⚡ Istfrequenz"
+                secondary_info: last-updated
+                icon: mdi:sine-wave
+              - entity: sensor.samsung_ehssentinel_outdoorcomp1orderhz
+                name: "📋 Sollfrequenz"
+                secondary_info: last-updated
+                icon: mdi:clipboard-list
+              - entity: sensor.samsung_ehssentinel_outdoorfanrpm1
+                name: "🌪️ Lüfter RPM"
+                secondary_info: last-updated
+                icon: mdi:fan
+            title: "🔧 Kompressor & Lüfter"
+            show_header_toggle: false
+            state_color: true
+        column_span: 1
+
+      # Drücke & Temperaturen
+      - type: grid
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdoorsuctionpressure
+                name: "📊 Saugdruck"
+                secondary_info: last-updated
+                icon: mdi:gauge-low
+              - entity: sensor.samsung_ehssentinel_outdoordischargepressure
+                name: "📊 Druckdruck"
+                secondary_info: last-updated
+                icon: mdi:gauge
+              - entity: sensor.samsung_ehssentinel_outdoorsuctiontemp
+                name: "🌡️ Saugtemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer
+              - entity: sensor.samsung_ehssentinel_outdoordischargetemp
+                name: "🌡️ Drucktemperatur"
+                secondary_info: last-updated
+                icon: mdi:thermometer-high
+            title: "📊 Drücke & Temperaturen"
+            show_header_toggle: false
+            state_color: true
+        column_span: 1
+
+# Zusätzliche Konfiguration für bessere Benutzerfreundlichkeit
+cards: []

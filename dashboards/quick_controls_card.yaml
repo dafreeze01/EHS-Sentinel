@@ -1,0 +1,83 @@
+# Schnellzugriff-Karte für wichtige Steuerungselemente
+# Kann als separate Karte in jedes Dashboard eingefügt werden
+
+type: vertical-stack
+cards:
+  - type: horizontal-stack
+    cards:
+      # Hauptsteuerung
+      - type: button
+        entity: select.samsung_ehssentinel_power
+        name: "Wärmepumpe"
+        icon: mdi:power
+        tap_action:
+          action: more-info
+        hold_action:
+          action: toggle
+        show_state: true
+        show_icon: true
+        
+      - type: button
+        entity: select.samsung_ehssentinel_indooropmode
+        name: "Betriebsmodus"
+        icon: mdi:thermostat
+        tap_action:
+          action: more-info
+        show_state: true
+        show_icon: true
+
+  - type: horizontal-stack
+    cards:
+      # Temperatursteuerung
+      - type: entities
+        entities:
+          - entity: number.samsung_ehssentinel_intempwaterlawtargetf
+            name: "🎯 Heizkurve"
+            secondary_info: last-updated
+        show_header_toggle: false
+        
+      - type: entities
+        entities:
+          - entity: sensor.samsung_ehssentinel_outdoortw2temp
+            name: "🌡️ Vorlauf"
+            secondary_info: last-updated
+          - entity: sensor.samsung_ehssentinel_outdoortw1temp
+            name: "🌡️ Rücklauf"
+            secondary_info: last-updated
+        show_header_toggle: false
+
+  # Status-Anzeigen
+  - type: glance
+    entities:
+      - entity: sensor.samsung_ehssentinel_ehssentinelheatoutput
+        name: "Heizleistung"
+        icon: mdi:fire
+      - entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunit
+        name: "Stromverbrauch"
+        icon: mdi:lightning-bolt
+      - entity: sensor.samsung_ehssentinel_ehssentinelcop
+        name: "COP"
+        icon: mdi:chart-line-variant
+      - entity: binary_sensor.samsung_ehssentinel_dhwpower
+        name: "Warmwasser"
+        icon: mdi:water-boiler
+    show_name: true
+    show_state: true
+    show_icon: true
+    columns: 4
+    
+  # Schnelle Temperaturanpassungen
+  - type: entities
+    title: "🎛️ Schnelleinstellungen"
+    entities:
+      - entity: number.samsung_ehssentinel_infsv1031
+        name: "🔥 Max. Heiztemperatur"
+        secondary_info: last-updated
+      - entity: number.samsung_ehssentinel_infsv1051
+        name: "🚿 Max. Warmwassertemperatur"
+        secondary_info: last-updated
+      - entity: number.samsung_ehssentinel_infsv1011
+        name: "❄️ Max. Kühltemperatur"
+        secondary_info: last-updated
+    show_header_toggle: false
+    state_color: true
