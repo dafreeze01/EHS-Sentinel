@@ -1,0 +1,881 @@
+# Modernes Mushroom-basiertes Dashboard für EHS-Sentinel
+# Verwendet die neuesten HACS-Erweiterungen für eine premium Benutzeroberfläche
+
+title: "🏠 EHS Smart Control"
+views:
+  # ===== HAUPTÜBERSICHT MIT MUSHROOM CARDS =====
+  - title: "🏠 Übersicht"
+    type: sections
+    max_columns: 4
+    subview: false
+    sections:
+      # Hero Section mit Mushroom Title Card
+      - type: grid
+        cards:
+          - type: custom:mushroom-title-card
+            title: "Samsung EHS Wärmepumpe"
+            subtitle: "Intelligente Steuerung & Überwachung"
+            title_tap_action:
+              action: navigate
+              navigation_path: /lovelace/system-info
+        column_span: 4
+
+      # Hauptsteuerung mit Mushroom Cards
+      - type: grid
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: select.samsung_ehssentinel_power
+            name: "Wärmepumpe"
+            icon: mdi:heat-pump
+            icon_color: red
+            tap_action:
+              action: more-info
+              haptic: medium
+            hold_action:
+              action: toggle
+              haptic: success
+            card_mod:
+              style: |
+                ha-card {
+                  --ha-card-border-radius: 20px;
+                  --ha-card-box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                  transition: all 0.3s ease;
+                }
+                ha-card:hover {
+                  transform: translateY(-2px);
+                  --ha-card-box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                }
+
+          - type: custom:mushroom-entity-card
+            entity: select.samsung_ehssentinel_indooropmode
+            name: "Betriebsmodus"
+            icon: mdi:thermostat
+            icon_color: blue
+            tap_action:
+              action: more-info
+              haptic: light
+
+          - type: custom:mushroom-entity-card
+            entity: sensor.samsung_ehssentinel_outdooroperationstatus
+            name: "Status"
+            icon: mdi:information-outline
+            icon_color: green
+            tap_action:
+              action: more-info
+
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.samsung_ehssentinel_dhwpower
+            name: "Warmwasser"
+            icon: mdi:water-boiler
+            icon_color: orange
+            tap_action:
+              action: more-info
+        column_span: 4
+
+      # Temperatur-Chips mit Mushroom Chips Card
+      - type: grid
+        cards:
+          - type: custom:mushroom-chips-card
+            chips:
+              - type: template
+                entity: sensor.samsung_ehssentinel_outdoortw2temp
+                icon: mdi:thermometer-chevron-up
+                icon_color: red
+                content: "Vorlauf: {{ states(entity) }}°C"
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --chip-background: rgba(255, 107, 107, 0.1);
+                      --chip-border-color: rgba(255, 107, 107, 0.3);
+                    }
+
+              - type: template
+                entity: sensor.samsung_ehssentinel_outdoortw1temp
+                icon: mdi:thermometer-chevron-down
+                icon_color: blue
+                content: "Rücklauf: {{ states(entity) }}°C"
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --chip-background: rgba(78, 205, 196, 0.1);
+                      --chip-border-color: rgba(78, 205, 196, 0.3);
+                    }
+
+              - type: template
+                entity: sensor.samsung_ehssentinel_outdoorouttemp
+                icon: mdi:thermometer
+                icon_color: green
+                content: "Außen: {{ states(entity) }}°C"
+                tap_action:
+                  action: more-info
+
+              - type: template
+                entity: sensor.samsung_ehssentinel_indoordhwcurrenttemp
+                icon: mdi:water-thermometer
+                icon_color: orange
+                content: "Warmwasser: {{ states(entity) }}°C"
+                tap_action:
+                  action: more-info
+            alignment: center
+        column_span: 4
+
+      # Leistungs-Karten mit Button Card
+      - type: grid
+        cards:
+          - type: custom:button-card
+            entity: sensor.samsung_ehssentinel_ehssentinelheatoutput
+            name: "Heizleistung"
+            icon: mdi:fire
+            show_state: true
+            show_units: true
+            styles:
+              card:
+                - background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                - border-radius: "20px"
+                - box-shadow: "0 4px 20px rgba(0,0,0,0.1)"
+                - color: "white"
+                - height: "120px"
+                - transition: "all 0.3s ease"
+              name:
+                - font-size: "14px"
+                - font-weight: "bold"
+                - margin-top: "10px"
+              state:
+                - font-size: "24px"
+                - font-weight: "bold"
+                - margin-top: "5px"
+              icon:
+                - width: "40px"
+                - height: "40px"
+                - margin-top: "10px"
+            tap_action:
+              action: more-info
+              haptic: medium
+            card_mod:
+              style: |
+                ha-card:hover {
+                  transform: translateY(-3px);
+                  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+                }
+
+          - type: custom:button-card
+            entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunit
+            name: "Stromverbrauch"
+            icon: mdi:lightning-bolt
+            show_state: true
+            show_units: true
+            styles:
+              card:
+                - background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+                - border-radius: "20px"
+                - box-shadow: "0 4px 20px rgba(0,0,0,0.1)"
+                - color: "white"
+                - height: "120px"
+              name:
+                - font-size: "14px"
+                - font-weight: "bold"
+                - margin-top: "10px"
+              state:
+                - font-size: "24px"
+                - font-weight: "bold"
+                - margin-top: "5px"
+              icon:
+                - width: "40px"
+                - height: "40px"
+                - margin-top: "10px"
+            tap_action:
+              action: more-info
+
+          - type: custom:button-card
+            entity: sensor.samsung_ehssentinel_ehssentinelcop
+            name: "COP Aktuell"
+            icon: mdi:chart-line-variant
+            show_state: true
+            styles:
+              card:
+                - background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
+                - border-radius: "20px"
+                - box-shadow: "0 4px 20px rgba(0,0,0,0.1)"
+                - color: "white"
+                - height: "120px"
+              name:
+                - font-size: "14px"
+                - font-weight: "bold"
+                - margin-top: "10px"
+              state:
+                - font-size: "24px"
+                - font-weight: "bold"
+                - margin-top: "5px"
+              icon:
+                - width: "40px"
+                - height: "40px"
+                - margin-top: "10px"
+            tap_action:
+              action: more-info
+
+          - type: custom:button-card
+            entity: sensor.samsung_ehssentinel_inflowsensorcalc
+            name: "Durchfluss"
+            icon: mdi:water-pump
+            show_state: true
+            show_units: true
+            styles:
+              card:
+                - background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"
+                - border-radius: "20px"
+                - box-shadow: "0 4px 20px rgba(0,0,0,0.1)"
+                - color: "white"
+                - height: "120px"
+              name:
+                - font-size: "14px"
+                - font-weight: "bold"
+                - margin-top: "10px"
+              state:
+                - font-size: "24px"
+                - font-weight: "bold"
+                - margin-top: "5px"
+              icon:
+                - width: "40px"
+                - height: "40px"
+                - margin-top: "10px"
+            tap_action:
+              action: more-info
+        column_span: 4
+
+      # ApexCharts für erweiterte Diagramme
+      - type: grid
+        cards:
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: "🌡️ Temperaturverlauf (24h)"
+              show_states: true
+              colorize_states: true
+            graph_span: 24h
+            update_interval: 5min
+            apex_config:
+              chart:
+                height: 300
+                type: area
+                background: transparent
+                fontFamily: "Roboto, sans-serif"
+              theme:
+                mode: light
+                palette: palette1
+              stroke:
+                curve: smooth
+                width: 3
+              fill:
+                type: gradient
+                gradient:
+                  shadeIntensity: 0.1
+                  opacityFrom: 0.7
+                  opacityTo: 0.1
+              dataLabels:
+                enabled: false
+              grid:
+                borderColor: "#e0e0e0"
+                strokeDashArray: 3
+              xaxis:
+                type: datetime
+                labels:
+                  format: "HH:mm"
+              yaxis:
+                title:
+                  text: "Temperatur (°C)"
+                labels:
+                  formatter: |
+                    EVAL:function(value) {
+                      return value.toFixed(1) + '°C';
+                    }
+              tooltip:
+                theme: light
+                x:
+                  format: "dd.MM HH:mm"
+                y:
+                  formatter: |
+                    EVAL:function(value) {
+                      return value.toFixed(1) + '°C';
+                    }
+              legend:
+                position: bottom
+                horizontalAlign: center
+            series:
+              - entity: sensor.samsung_ehssentinel_outdoortw2temp
+                name: "Vorlauf"
+                color: "#ff6b6b"
+                stroke_width: 3
+              - entity: sensor.samsung_ehssentinel_outdoortw1temp
+                name: "Rücklauf"
+                color: "#4ecdc4"
+                stroke_width: 3
+              - entity: sensor.samsung_ehssentinel_outdoorouttemp
+                name: "Außen"
+                color: "#45b7d1"
+                stroke_width: 3
+              - entity: sensor.samsung_ehssentinel_indoordhwcurrenttemp
+                name: "Warmwasser"
+                color: "#ffa726"
+                stroke_width: 3
+        column_span: 4
+
+      # Effizienz-Diagramm mit gemischten Achsen
+      - type: grid
+        cards:
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: "⚡ Leistung & Effizienz (24h)"
+              show_states: true
+              colorize_states: true
+            graph_span: 24h
+            update_interval: 5min
+            apex_config:
+              chart:
+                height: 350
+                type: line
+                background: transparent
+              theme:
+                mode: light
+              stroke:
+                curve: smooth
+                width: [3, 3, 4]
+              dataLabels:
+                enabled: false
+              grid:
+                borderColor: "#e0e0e0"
+                strokeDashArray: 3
+              xaxis:
+                type: datetime
+                labels:
+                  format: "HH:mm"
+              yaxis:
+                - title:
+                    text: "Leistung (W)"
+                  labels:
+                    formatter: |
+                      EVAL:function(value) {
+                        return value.toFixed(0) + 'W';
+                      }
+                - opposite: true
+                  title:
+                    text: "COP"
+                  labels:
+                    formatter: |
+                      EVAL:function(value) {
+                        return value.toFixed(2);
+                      }
+              tooltip:
+                shared: true
+                intersect: false
+                theme: light
+              legend:
+                position: bottom
+                horizontalAlign: center
+            series:
+              - entity: sensor.samsung_ehssentinel_ehssentinelheatoutput
+                name: "Heizleistung"
+                color: "#ff9f43"
+                yaxis_id: first
+                stroke_width: 3
+              - entity: sensor.samsung_ehssentinel_outdoorcontrolwattmeterallunit
+                name: "Stromverbrauch"
+                color: "#feca57"
+                yaxis_id: first
+                stroke_width: 3
+              - entity: sensor.samsung_ehssentinel_ehssentinelcop
+                name: "COP"
+                color: "#48dbfb"
+                yaxis_id: second
+                stroke_width: 4
+                type: area
+                opacity: 0.3
+        column_span: 4
+
+  # ===== STEUERUNG MIT LAYOUT CARD =====
+  - title: "🎛️ Steuerung"
+    type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: "1fr 1fr 1fr"
+      grid-template-rows: "auto"
+      grid-gap: "20px"
+      margin: "20px"
+    cards:
+      # Heizungssteuerung
+      - type: custom:mushroom-title-card
+        title: "🔥 Heizung"
+        subtitle: "Temperatur & Betriebsparameter"
+        view_layout:
+          grid-column: "1 / -1"
+
+      - type: vertical-stack
+        cards:
+          - type: custom:mushroom-number-card
+            entity: number.samsung_ehssentinel_intempwaterlawtargetf
+            name: "Heizkurve Zielwert"
+            icon: mdi:chart-line
+            icon_color: red
+            display_mode: buttons
+            tap_action:
+              action: more-info
+              haptic: light
+
+          - type: custom:mushroom-number-card
+            entity: number.samsung_ehssentinel_infsv1031
+            name: "Max. Vorlauftemperatur"
+            icon: mdi:thermometer-high
+            icon_color: orange
+            display_mode: slider
+
+          - type: custom:mushroom-number-card
+            entity: number.samsung_ehssentinel_infsv1032
+            name: "Min. Vorlauftemperatur"
+            icon: mdi:thermometer-low
+            icon_color: blue
+            display_mode: slider
+
+          - type: custom:mushroom-select-card
+            entity: select.samsung_ehssentinel_infsv2041
+            name: "Wassergesetz Auswahl"
+            icon: mdi:swap-horizontal
+            icon_color: purple
+
+      # Kühlungssteuerung
+      - type: vertical-stack
+        cards:
+          - type: custom:mushroom-title-card
+            title: "❄️ Kühlung"
+            subtitle: "Kühlparameter"
+
+          - type: custom:mushroom-number-card
+            entity: number.samsung_ehssentinel_infsv1011
+            name: "Max. Kühltemperatur"
+            icon: mdi:snowflake
+            icon_color: cyan
+            display_mode: slider
+
+          - type: custom:mushroom-number-card
+            entity: number.samsung_ehssentinel_infsv1012
+            name: "Min. Kühltemperatur"
+            icon: mdi:snowflake-variant
+            icon_color: blue
+            display_mode: slider
+
+          - type: custom:mushroom-number-card
+            entity: number.samsung_ehssentinel_infsv1021
+            name: "Max. Raumtemperatur"
+            icon: mdi:home-thermometer
+            icon_color: green
+            display_mode: buttons
+
+      # Warmwassersteuerung
+      - type: vertical-stack
+        cards:
+          - type: custom:mushroom-title-card
+            title: "🚿 Warmwasser"
+            subtitle: "DHW Parameter"
+
+          - type: custom:mushroom-select-card
+            entity: select.samsung_ehssentinel_infsv3011
+            name: "DHW Aktiviert"
+            icon: mdi:water-boiler
+            icon_color: orange
+
+          - type: custom:mushroom-number-card
+            entity: number.samsung_ehssentinel_infsv1051
+            name: "Max. Tanktemperatur"
+            icon: mdi:thermometer-high
+            icon_color: red
+            display_mode: slider
+
+          - type: custom:mushroom-number-card
+            entity: number.samsung_ehssentinel_infsv1052
+            name: "Min. Tanktemperatur"
+            icon: mdi:thermometer-low
+            icon_color: blue
+            display_mode: slider
+
+          - type: custom:mushroom-entity-card
+            entity: switch.samsung_ehssentinel_infsv3041
+            name: "Desinfektion"
+            icon: mdi:bacteria
+            icon_color: green
+            tap_action:
+              action: toggle
+              haptic: success
+
+  # ===== SMART FEATURES =====
+  - title: "🧠 Smart Features"
+    type: sections
+    max_columns: 3
+    path: smart-features
+    sections:
+      # Smart Grid Ready mit State Switch
+      - type: grid
+        cards:
+          - type: custom:state-switch
+            entity: select.samsung_ehssentinel_sgreadymodestate
+            default: "default"
+            states:
+              "NORMAL":
+                type: custom:mushroom-entity-card
+                entity: select.samsung_ehssentinel_sgreadymodestate
+                name: "Smart Grid: Normal"
+                icon: mdi:home-lightning-bolt
+                icon_color: green
+                secondary_info: "Normaler Betrieb"
+              "AKTIV":
+                type: custom:mushroom-entity-card
+                entity: select.samsung_ehssentinel_sgreadymodestate
+                name: "Smart Grid: Aktiv"
+                icon: mdi:home-lightning-bolt
+                icon_color: orange
+                secondary_info: "Optimierter Betrieb"
+              "FORCIERT":
+                type: custom:mushroom-entity-card
+                entity: select.samsung_ehssentinel_sgreadymodestate
+                name: "Smart Grid: Forciert"
+                icon: mdi:home-lightning-bolt
+                icon_color: red
+                secondary_info: "Maximale Leistung"
+              default:
+                type: custom:mushroom-entity-card
+                entity: select.samsung_ehssentinel_sgreadymodestate
+                name: "Smart Grid Ready"
+                icon: mdi:home-lightning-bolt
+                icon_color: grey
+
+          - type: custom:mushroom-chips-card
+            chips:
+              - type: entity
+                entity: select.samsung_ehssentinel_infsv5091
+                name: "Smart Grid"
+                icon: mdi:transmission-tower
+                tap_action:
+                  action: more-info
+
+              - type: entity
+                entity: number.samsung_ehssentinel_infsv5092
+                name: "Temp. Shift Heizung"
+                icon: mdi:thermometer-chevron-up
+                tap_action:
+                  action: more-info
+
+              - type: entity
+                entity: number.samsung_ehssentinel_infsv5093
+                name: "Temp. Shift DHW"
+                icon: mdi:water-thermometer
+                tap_action:
+                  action: more-info
+        column_span: 1
+
+      # PV-Steuerung mit Auto-Entities
+      - type: grid
+        cards:
+          - type: custom:auto-entities
+            card:
+              type: entities
+              title: "☀️ PV-Steuerung"
+              show_header_toggle: false
+              state_color: true
+            filter:
+              include:
+                - entity_id: "*pv*"
+                  options:
+                    secondary_info: last-updated
+                - entity_id: "*solar*"
+                  options:
+                    secondary_info: last-updated
+                - entity_id: "select.samsung_ehssentinel_infsv5081"
+                  options:
+                    name: "PV Steuerung aktiviert"
+                    icon: mdi:solar-power
+                - entity_id: "number.samsung_ehssentinel_infsv5082"
+                  options:
+                    name: "PV Temp.-Shift Kühlung"
+                    icon: mdi:snowflake
+                - entity_id: "number.samsung_ehssentinel_infsv5083"
+                  options:
+                    name: "PV Temp.-Shift Heizung"
+                    icon: mdi:fire
+            sort:
+              method: name
+        column_span: 1
+
+      # Leistungssteuerung
+      - type: grid
+        cards:
+          - type: entities
+            title: "⚡ Leistungssteuerung"
+            entities:
+              - entity: select.samsung_ehssentinel_infsv5041
+                name: "Leistungsspitzensteuerung"
+                icon: mdi:chart-line
+                secondary_info: last-updated
+              - entity: select.samsung_ehssentinel_infsv5042
+                name: "Zwangsabschaltung"
+                icon: mdi:power-off
+                secondary_info: last-updated
+              - entity: select.samsung_ehssentinel_infsv5043
+                name: "Eingangsspannung verwenden"
+                icon: mdi:sine-wave
+                secondary_info: last-updated
+              - entity: select.samsung_ehssentinel_infsv5051
+                name: "Frequenzverhältnis"
+                icon: mdi:waveform
+                secondary_info: last-updated
+            show_header_toggle: false
+            state_color: true
+        column_span: 1
+
+      # Scheduler Card für Zeitpläne
+      - type: grid
+        cards:
+          - type: custom:scheduler-card
+            title: "📅 Zeitpläne"
+            discover_existing: true
+            standard_configuration: true
+            include:
+              - "number.samsung_ehssentinel_infsv3043"  # Desinfektion Startzeit
+              - "switch.samsung_ehssentinel_infsv3041"  # Desinfektion
+              - "select.samsung_ehssentinel_infsv3011"  # DHW
+            exclude: []
+            groups:
+              - name: "Warmwasser"
+                icon: mdi:water-boiler
+                include:
+                  - "number.samsung_ehssentinel_infsv3043"
+                  - "switch.samsung_ehssentinel_infsv3041"
+              - name: "Heizung"
+                icon: mdi:radiator
+                include:
+                  - "number.samsung_ehssentinel_intempwaterlawtargetf"
+            customize:
+              "number.samsung_ehssentinel_infsv3043":
+                name: "Desinfektion Startzeit"
+                icon: mdi:clock-start
+              "switch.samsung_ehssentinel_infsv3041":
+                name: "Desinfektion aktivieren"
+                icon: mdi:bacteria
+        column_span: 3
+
+  # ===== DIAGNOSE & MONITORING =====
+  - title: "🔍 Diagnose"
+    type: sections
+    max_columns: 2
+    path: diagnose
+    sections:
+      # Mini Graph Cards für kompakte Übersicht
+      - type: grid
+        cards:
+          - type: custom:mini-graph-card
+            name: "Kompressor Frequenz"
+            entity: sensor.samsung_ehssentinel_outdoorcomp1runhz
+            icon: mdi:sine-wave
+            line_color: "#3498db"
+            line_width: 3
+            font_size: 75
+            hours_to_show: 12
+            points_per_hour: 4
+            show:
+              name: true
+              icon: true
+              state: true
+              graph: line
+              fill: fade
+              points: hover
+              legend: false
+              extrema: true
+            card_mod:
+              style: |
+                ha-card {
+                  border-radius: 15px;
+                  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+
+          - type: custom:mini-graph-card
+            name: "Außenlüfter RPM"
+            entity: sensor.samsung_ehssentinel_outdoorfanrpm1
+            icon: mdi:fan
+            line_color: "#e74c3c"
+            line_width: 3
+            font_size: 75
+            hours_to_show: 12
+            points_per_hour: 4
+            show:
+              name: true
+              icon: true
+              state: true
+              graph: line
+              fill: fade
+              points: hover
+              legend: false
+              extrema: true
+
+          - type: custom:mini-graph-card
+            name: "Saugdruck"
+            entity: sensor.samsung_ehssentinel_outdoorsuctionpressure
+            icon: mdi:gauge-low
+            line_color: "#9b59b6"
+            line_width: 3
+            font_size: 75
+            hours_to_show: 12
+            points_per_hour: 4
+            show:
+              name: true
+              icon: true
+              state: true
+              graph: line
+              fill: fade
+              points: hover
+              legend: false
+              extrema: true
+
+          - type: custom:mini-graph-card
+            name: "Druckdruck"
+            entity: sensor.samsung_ehssentinel_outdoordischargepressure
+            icon: mdi:gauge
+            line_color: "#f39c12"
+            line_width: 3
+            font_size: 75
+            hours_to_show: 12
+            points_per_hour: 4
+            show:
+              name: true
+              icon: true
+              state: true
+              graph: line
+              fill: fade
+              points: hover
+              legend: false
+              extrema: true
+        column_span: 2
+
+      # Multiple Entity Row für kompakte Darstellung
+      - type: grid
+        cards:
+          - type: entities
+            title: "🌡️ Systemtemperaturen"
+            entities:
+              - type: custom:multiple-entity-row
+                entity: sensor.samsung_ehssentinel_outdoorsuctiontemp
+                name: "Saugung"
+                icon: mdi:thermometer
+                show_state: false
+                entities:
+                  - entity: sensor.samsung_ehssentinel_outdoorsuctiontemp
+                    name: "Aktuell"
+                  - entity: sensor.samsung_ehssentinel_outdoorsuctiontemp
+                    name: "Min"
+                    attribute: min_value
+                  - entity: sensor.samsung_ehssentinel_outdoorsuctiontemp
+                    name: "Max"
+                    attribute: max_value
+
+              - type: custom:multiple-entity-row
+                entity: sensor.samsung_ehssentinel_outdoordischargetemp
+                name: "Druck"
+                icon: mdi:thermometer-high
+                show_state: false
+                entities:
+                  - entity: sensor.samsung_ehssentinel_outdoordischargetemp
+                    name: "Aktuell"
+                  - entity: sensor.samsung_ehssentinel_outdoordischargetemp
+                    name: "Min"
+                    attribute: min_value
+                  - entity: sensor.samsung_ehssentinel_outdoordischargetemp
+                    name: "Max"
+                    attribute: max_value
+
+              - type: custom:multiple-entity-row
+                entity: sensor.samsung_ehssentinel_outdoorcondensertemp
+                name: "Kondensator"
+                icon: mdi:radiator
+                show_state: false
+                entities:
+                  - entity: sensor.samsung_ehssentinel_outdoorcondensertemp
+                    name: "Aktuell"
+                  - entity: sensor.samsung_ehssentinel_outdoorcondensertemp
+                    name: "Min"
+                    attribute: min_value
+                  - entity: sensor.samsung_ehssentinel_outdoorcondensertemp
+                    name: "Max"
+                    attribute: max_value
+
+              - type: custom:multiple-entity-row
+                entity: sensor.samsung_ehssentinel_outdoorevaporatortemp
+                name: "Verdampfer"
+                icon: mdi:snowflake
+                show_state: false
+                entities:
+                  - entity: sensor.samsung_ehssentinel_outdoorevaporatortemp
+                    name: "Aktuell"
+                  - entity: sensor.samsung_ehssentinel_outdoorevaporatortemp
+                    name: "Min"
+                    attribute: min_value
+                  - entity: sensor.samsung_ehssentinel_outdoorevaporatortemp
+                    name: "Max"
+                    attribute: max_value
+            show_header_toggle: false
+            state_color: true
+        column_span: 2
+
+      # Plotly Scatter Plot für COP vs. Außentemperatur
+      - type: grid
+        cards:
+          - type: custom:plotly-graph
+            title: "📊 COP vs. Außentemperatur Korrelation"
+            entities:
+              - entity: sensor.samsung_ehssentinel_outdoorouttemp
+                name: "Außentemperatur"
+              - entity: sensor.samsung_ehssentinel_ehssentinelcop
+                name: "COP"
+            hours_to_show: 168  # 7 Tage
+            refresh_interval: 3600  # 1 Stunde
+            layout:
+              title:
+                text: "Effizienz-Korrelation (7 Tage)"
+                font:
+                  size: 16
+                  color: "#2c3e50"
+              xaxis:
+                title: "Außentemperatur (°C)"
+                showgrid: true
+                gridcolor: "#ecf0f1"
+                zeroline: false
+              yaxis:
+                title: "COP"
+                showgrid: true
+                gridcolor: "#ecf0f1"
+                zeroline: false
+              plot_bgcolor: "rgba(0,0,0,0)"
+              paper_bgcolor: "rgba(0,0,0,0)"
+              font:
+                family: "Roboto, sans-serif"
+                color: "#2c3e50"
+              showlegend: true
+              legend:
+                orientation: "h"
+                y: -0.2
+              margin:
+                l: 60
+                r: 40
+                t: 60
+                b: 80
+            config:
+              scrollZoom: true
+              displayModeBar: true
+              modeBarButtonsToRemove:
+                - "lasso2d"
+                - "select2d"
+                - "autoScale2d"
+              displaylogo: false
+            raw_plotly_config: true
+        column_span: 2
+
+cards: []
