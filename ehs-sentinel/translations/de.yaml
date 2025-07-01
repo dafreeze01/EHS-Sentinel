@@ -50,10 +50,36 @@ configuration:
     name: "⚠️ Polling aktiviert"
     description: "WARNUNG: Aktiviert die aktive Abfrage von Werten. Dies greift aktiv in die Kommunikation ein. Nutzung auf eigene Gefahr!"
   
+  # Polling-Konfiguration
+  polling_intervalle:
+    name: "Polling-Intervalle"
+    description: "Konfiguration der Abfrageintervalle für verschiedene Sensorgruppen"
+  polling_intervalle.basic_sensors:
+    name: "Grundlegende Sensoren"
+    description: "Intervall für kritische Betriebsdaten in Sekunden (empfohlen: 15-30)"
+  polling_intervalle.fsv10xx:
+    name: "FSV10xx (Fernbedienung)"
+    description: "Intervall für Fernbedienungs-Parameter in Sekunden (empfohlen: 300)"
+  polling_intervalle.fsv20xx:
+    name: "FSV20xx (Wassergesetz)"
+    description: "Intervall für Wassergesetz-Parameter in Sekunden (empfohlen: 600)"
+  polling_intervalle.fsv30xx:
+    name: "FSV30xx (Warmwasser)"
+    description: "Intervall für Warmwasser-Parameter in Sekunden (empfohlen: 900)"
+  polling_intervalle.fsv40xx:
+    name: "FSV40xx (Heizung)"
+    description: "Intervall für Heizungs-Parameter in Sekunden (empfohlen: 1200)"
+  polling_intervalle.fsv50xx:
+    name: "FSV50xx (Sonstige)"
+    description: "Intervall für sonstige Parameter in Sekunden (empfohlen: 1800)"
+  
   # Protokollierung
   protokoll_datei:
     name: "Protokoll Datei"
     description: "Pfad zur Protokoll Datei (optional, leer lassen für keine Protokollierung)"
+  log_level:
+    name: "Log-Level"
+    description: "Detailgrad der Protokollierung (DEBUG, INFO, WARNING, ERROR)"
   log_geraet_hinzugefuegt:
     name: "Log: Gerät hinzugefügt"
     description: "Protokolliert wenn neue Geräte zur Home Assistant Discovery hinzugefügt werden"

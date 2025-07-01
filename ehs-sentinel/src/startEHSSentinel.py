@@ -11,6 +11,8 @@ from EHSArguments import EHSArguments
 from EHSConfig import EHSConfig
 from EHSExceptions import MessageWarningException, SkipInvalidPacketException
 from MQTTClient import MQTTClient
+from PollingManager import PollingManager
+from PacketMonitor import PacketMonitor
 import aiofiles
 import random
 
@@ -21,7 +23,7 @@ from NASAMessage import NASAMessage
 
 # Version mit automatischem Timestamp
 VERSION_BASE = "1.2.0"
-VERSION_PATCH = "2"
+VERSION_PATCH = "3"
 version = f"{VERSION_BASE}.{VERSION_PATCH}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
 build_info = {
     "version": f"{VERSION_BASE}.{VERSION_PATCH}",
@@ -33,7 +35,9 @@ build_info = {
         "Fixed STR-type sensor handling (Type 3)",
         "Improved error handling with graceful fallbacks",
         "Secure arithmetic evaluation (SafeArithmetic)",
-        "Comprehensive device count reporting"
+        "Comprehensive device count reporting",
+        "Dreistufige Polling-Strategie",
+        "Paketqualitätsüberwachung"
     ]
 }
 
@@ -76,9 +80,16 @@ async def main():
 
     await asyncio.sleep(1)
 
+    # Initialisiere PollingManager und PacketMonitor
+    polling_manager = PollingManager()
+    packet_monitor = PacketMonitor(polling_manager)
+    
+    # Starte Paketqualitäts-Monitoring
+    await packet_monitor.start_monitoring()
+
     # we are not in dryrun mode for addon, so we need to read from Serial Port
     try:
-        await serial_connection(config, args, mqtt)
+        await serial_connection(config, args, mqtt, polling_manager, packet_monitor)
     except Exception as e:
         logger.error(f"❌ Failed to establish connection: {e}")
         logger.error(traceback.format_exc())
@@ -87,20 +98,20 @@ async def main():
             await asyncio.sleep(60)
             logger.warning("⚠️ No active connection. Waiting for restart.")
 
-async def process_buffer(buffer, args, config):
+async def process_buffer(buffer, args, config, packet_monitor):
     if buffer:
         if (len(buffer) > 14):
             for i in range(0, len(buffer)):
                 if buffer[i] == 0x32:
                     if (len(buffer[i:]) > 14):
-                        asyncio.create_task(process_packet(buffer[i:], args, config))
+                        asyncio.create_task(process_packet(buffer[i:], args, config, packet_monitor))
                     else:
                         logger.debug(f"Buffermessages to short for NASA {len(buffer)}")
                     break
         else:
             logger.debug(f"Buffer to short for NASA {len(buffer)}")
 
-async def serial_connection(config, args, mqtt):
+async def serial_connection(config, args, mqtt, polling_manager, packet_monitor):
     buffer = []
     loop = asyncio.get_running_loop()
 
@@ -127,15 +138,15 @@ async def serial_connection(config, args, mqtt):
             
         logger.info("🔄 Starting read/write tasks...")
         await asyncio.gather(
-                serial_read(reader, args, config),
-                serial_write(writer, config, mqtt),
+                serial_read(reader, args, config, packet_monitor),
+                serial_write(writer, config, mqtt, polling_manager),
             )
     except Exception as e:
         logger.error(f"❌ Connection failed: {e}")
         logger.error(traceback.format_exc())
         raise
 
-async def serial_read(reader: asyncio.StreamReader, args, config):
+async def serial_read(reader: asyncio.StreamReader, args, config, packet_monitor):
     prev_byte = 0x00
     packet_started = False
     data = bytearray()
@@ -154,12 +165,16 @@ async def serial_read(reader: asyncio.StreamReader, args, config):
         
                     if packet_size <= len(data):
                         if current_byte == b'\x34':
-                            asyncio.create_task(process_buffer(data, args, config))
+                            # Gültiges Paket mit korrekter Endkennung
+                            packet_monitor.record_valid_packet()
+                            asyncio.create_task(process_buffer(data, args, config, packet_monitor))
                             logger.debug(f"Received int: {data}")
                             logger.debug(f"Received hex: {[hex(x) for x in data]}")
                             data = bytearray()
                             packet_started = False
                         else:
+                            # Ungültiges Paket ohne korrekte Endkennung
+                            packet_monitor.record_invalid_packet(data, f"Packet does not end with an x34. Size {packet_size} length {len(data)}")
                             if config.LOGGING['invalidPacket']:
                                 logger.warning(f"Packet does not end with an x34. Size {packet_size} length {len(data)}")
                                 logger.warning(f"Received hex: {[hex(x) for x in data]}")
@@ -187,67 +202,25 @@ async def serial_read(reader: asyncio.StreamReader, args, config):
             logger.error(traceback.format_exc())
             await asyncio.sleep(5)  # Wait before retrying
 
-async def serial_write(writer:asyncio.StreamWriter, config, mqtt):
+async def serial_write(writer:asyncio.StreamWriter, config, mqtt, polling_manager):
     # Create MessageProducer with proper writer
     producer = MessageProducer(writer)
     
     # Set the producer in MQTT client for control messages
     mqtt.set_message_producer(producer)
     
+    # Set the producer in PollingManager
+    polling_manager.set_producer(producer)
+    
     logger.info("📤 Starting write loop and pollers...")
 
     # Wait 20s before initial polling
     await asyncio.sleep(20)
 
-    if config.POLLING is not None:
-        for poller in config.POLLING['fetch_interval']:
-            if poller['enable']:
-                await asyncio.sleep(1)
-                asyncio.create_task(make_default_request_packet(producer=producer, config=config, poller=poller))
+    # Starte das dreistufige Polling
+    await polling_manager.start_polling()
 
-async def make_default_request_packet(producer: MessageProducer, config: EHSConfig, poller):
-    group_name = poller['name']
-    schedule = poller['schedule']
-    message_list = config.POLLING['groups'][group_name]
-    
-    # Zähle verfügbare Sensoren im NASA Repository
-    total_nasa_sensors = len(config.NASA_REPO) if hasattr(config, 'NASA_REPO') else 0
-    
-    logger.info(f"🔄 Setting up Poller '{group_name}' every {schedule} seconds")
-    logger.info(f"📊 Polling {len(message_list)}/{total_nasa_sensors} sensors in group '{group_name}'")
-    
-    # Log first few sensors for verification with descriptions
-    if len(message_list) > 0:
-        sample_sensors = message_list[:5]
-        logger.info(f"📋 Sample sensors:")
-        for i, sensor in enumerate(sample_sensors, 1):
-            description = ""
-            if sensor in config.NASA_REPO:
-                description = config.NASA_REPO[sensor].get('description', '')
-                if description:
-                    description = f" - {description}"
-            logger.info(f"   {i}. {sensor}{description}")
-        
-        if len(message_list) > 5:
-            logger.info(f"   ... and {len(message_list) - 5} more sensors")
-
-    while True:
-        try:
-            await producer.read_request(message_list)
-            logger.info(f"✅ Polled {len(message_list)}/{total_nasa_sensors} sensors from group '{group_name}'")
-        except MessageWarningException as e:
-            logger.warning(f"⚠️ Polling Messages was not successful for group '{group_name}'")
-            logger.warning(f"Error processing message: {e}")
-            logger.warning(f"Message List: {message_list}")
-        except Exception as e:
-            logger.error(f"❌ Error Occurred, Polling will be skipped for group '{group_name}'")
-            logger.error(f"Error processing message: {e}")
-            logger.error(traceback.format_exc())
-        
-        await asyncio.sleep(schedule)
-        logger.debug(f"🔄 Refresh Poller '{group_name}' - next poll in {schedule}s")
-
-async def process_packet(buffer, args, config):
+async def process_packet(buffer, args, config, packet_monitor):
     try:
         nasa_packet = NASAPacket()
         nasa_packet.parse(buffer)
@@ -277,20 +250,24 @@ async def process_packet(buffer, args, config):
         logger.warning(f"Error processing message: {e}")
         logger.warning(f"Complete Packet: {[hex(x) for x in buffer]}")
         logger.warning(traceback.format_exc())
+        packet_monitor.record_invalid_packet(buffer, f"Value Error: {e}")
     except SkipInvalidPacketException as e:
         logger.debug("Warning occurred, Packet will be skipped")
         logger.debug(f"Error processing message: {e}")
         logger.debug(f"Complete Packet: {[hex(x) for x in buffer]}")
         logger.debug(traceback.format_exc())
+        packet_monitor.record_invalid_packet(buffer, f"Invalid Packet: {e}")
     except MessageWarningException as e:
         logger.warning("Warning occurred, Packet will be skipped")
         logger.warning(f"Error processing message: {e}")
         logger.warning(f"Complete Packet: {[hex(x) for x in buffer]}")
         logger.warning(traceback.format_exc())
+        packet_monitor.record_invalid_packet(buffer, f"Message Warning: {e}")
     except Exception as e:
         logger.error("Error Occurred, Packet will be skipped")
         logger.error(f"Error processing message: {e}")
         logger.error(traceback.format_exc())
+        packet_monitor.record_invalid_packet(buffer, f"General Error: {e}")
 
 if __name__ == "__main__":
     try:
