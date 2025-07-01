@@ -30,12 +30,13 @@ def get_version_from_config():
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
             return config.get('version', '1.0.0')
-    except Exception as e:
+    except Exception:
         # Fallback-Version, wenn die Datei nicht gelesen werden kann
         return '1.0.0'
 
 # Lade Version aus config.yaml
 VERSION_BASE = get_version_from_config()
+VERSION_PATCH = "4"
 version = f"{VERSION_BASE}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
 
 build_info = {

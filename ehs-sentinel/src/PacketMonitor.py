@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import time
+import traceback
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -56,7 +57,7 @@ class PacketMonitor:
         self._load_reports()
         
         # Setze den Zeitpunkt des letzten Resets, falls nicht vorhanden
-        if not self._stats["last_reset"]:
+        if "last_reset" not in self._stats or not self._stats["last_reset"]:
             self._stats["last_reset"] = datetime.now().isoformat()
     
     def log_invalid_packet(self, message: str, hex_data: List[str], raw_data: bytes):
@@ -172,8 +173,12 @@ class PacketMonitor:
                 logger.debug(f"Paketstatistiken geladen: {self._stats}")
             else:
                 logger.info("📊 Keine vorhandenen Paketstatistiken gefunden, starte neue Aufzeichnung")
+                # Stelle sicher, dass last_reset initialisiert ist
+                self._stats["last_reset"] = datetime.now().isoformat()
         except Exception as e:
             logger.warning(f"Fehler beim Laden der Paketstatistiken: {e}")
+            # Stelle sicher, dass last_reset initialisiert ist
+            self._stats["last_reset"] = datetime.now().isoformat()
     
     def _save_stats(self):
         """Speichert Paketstatistiken in eine Datei."""

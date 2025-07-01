@@ -380,7 +380,7 @@ class MQTTClient:
 
     def _normalize_name(self, name):
         if self.useCamelCaseTopicNames:
-            prefix_to_remove = ['ENUM_', 'LVAR_', 'NASA_', 'VAR_']
+            prefix_to_remove = ['ENUM_', 'LVAR_', 'NASA_', 'VAR_', 'STR_']
             # remove unnecessary prefixes of name
             for prefix in prefix_to_remove:
                 if name.startswith(prefix):
