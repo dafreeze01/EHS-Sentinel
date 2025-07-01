@@ -12,13 +12,28 @@ from EHSExceptions import MessageWarningException, SkipInvalidPacketException
 from MQTTClient import MQTTClient
 import aiofiles
 import random
+import datetime
 
 # Get the logger
 from CustomLogger import logger
 from NASAPacket import NASAPacket, AddressClassEnum, PacketType, DataType
 from NASAMessage import NASAMessage
 
-version = "1.0.0 Home Assistant Addon"
+# Version mit automatischem Timestamp
+version = f"1.1.0-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
+build_info = {
+    "version": "1.1.0",
+    "build_date": datetime.datetime.now().isoformat(),
+    "build_type": "Home Assistant Addon",
+    "fixes": [
+        "Fixed arithmetic double-replacement bug",
+        "Fixed enum KeyError handling", 
+        "Fixed MessageProducer string conversion",
+        "Fixed MQTTClient platform KeyError",
+        "Added comprehensive error handling",
+        "Added graceful fallback values"
+    ]
+}
 
 async def main():
     """
@@ -36,7 +51,15 @@ async def main():
     logger.info("#    ######   ##  ##   #####             #####    ######  ##   ##    ####    ######  ##   ##   ######   #######    #")
     logger.info("#                                                                                                                  #")
     logger.info("####################################################################################################################")
-    logger.info(f"Starting EHSSentinel {version} written by echoDave")
+    logger.info(f"🚀 Starting EHSSentinel {version}")
+    logger.info(f"📦 Build Info:")
+    logger.info(f"   Version: {build_info['version']}")
+    logger.info(f"   Build Date: {build_info['build_date']}")
+    logger.info(f"   Build Type: {build_info['build_type']}")
+    logger.info(f"🔧 Recent Fixes:")
+    for fix in build_info['fixes']:
+        logger.info(f"   ✅ {fix}")
+    logger.info(f"👨‍💻 Written by echoDave")
     logger.info("")
 
     logger.info("Reading Home Assistant Addon Configuration ...")

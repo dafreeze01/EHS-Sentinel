@@ -3,6 +3,7 @@ import os
 import signal
 import json
 import time
+import datetime
 
 import gmqtt
 
@@ -301,12 +302,14 @@ class MQTTClient:
                       retain=True)
 
     def _get_device(self):
+        # Dynamic version with build timestamp
+        sw_version = f"1.1.0-{datetime.datetime.now().strftime('%Y%m%d')}"
         return {
                 "identifiers": self.DEVICE_ID,
                 "name": "Samsung EHS",
                 "manufacturer": "Samsung",
                 "model": "Mono HQ Quiet",
-                "sw_version": "1.0.0"
+                "sw_version": sw_version
             }   
 
     def _get_origin(self):
