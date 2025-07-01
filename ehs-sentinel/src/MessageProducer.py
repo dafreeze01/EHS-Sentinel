@@ -47,16 +47,22 @@ class MessageProducer:
 
     async def write_request(self, message: str, value: str | int, read_request_after=False):
         try:
-            decoded_value = self._decode_value(message.strip(), str(value).strip())
+            # Ensure value is properly converted
+            if isinstance(value, str):
+                value = value.strip()
+            
+            decoded_value = self._decode_value(message.strip(), value)
             nasa_packet = self._build_default_request_packet()
             nasa_packet.set_packet_messages([self._build_message(message.strip(), decoded_value)])
             nasa_packet.to_raw()
+            
             if self.config.LOGGING['controlMessage']:
                 logger.info(f"Write request for {message} with value: {value}")
                 logger.info(f"Sending NASA packet: {nasa_packet}")
             else:
                 logger.debug(f"Write request for {message} with value: {value}")
                 logger.debug(f"Sending NASA packet: {nasa_packet}")
+                
             await self._write_packet_to_serial(nasa_packet)
             await asyncio.sleep(1)
             await self.read_request([message])
@@ -76,16 +82,20 @@ class MessageProducer:
         try:
             float(s)
             return True
-        except ValueError:
+        except (ValueError, TypeError):
             return False
 
     def _decode_value(self, message, value) -> int:  
+        # Convert value to string if it's not already
+        if not isinstance(value, str):
+            value = str(value)
+            
         enumval = self._search_nasa_enumkey_for_value(message, value)
         if enumval is None:
             if self.is_number(value):
                 try:
                     numeric_value = int(float(value))
-                except ValueError:
+                except (ValueError, TypeError):
                     numeric_value = 0
 
                 if 'reverse-arithmetic' in self.config.NASA_REPO[message]:
@@ -109,20 +119,35 @@ class MessageProducer:
             value = 0
         
         # Ensure value is an integer
-        if isinstance(value, str):
+        if not isinstance(value, int):
             try:
-                value = int(float(value))
-            except ValueError:
+                if isinstance(value, str):
+                    value = int(float(value))
+                else:
+                    value = int(value)
+            except (ValueError, TypeError):
+                logger.warning(f"Could not convert value {value} to int, using 0")
                 value = 0
         
-        if tmpmsg.packet_message_type == 0:
-            value_raw = value.to_bytes(1, byteorder='big', signed=True) 
-        elif tmpmsg.packet_message_type == 1:
-            value_raw = value.to_bytes(2, byteorder='big', signed=True) 
-        elif tmpmsg.packet_message_type == 2:
-            value_raw = value.to_bytes(4, byteorder='big', signed=True) 
-        else:
-            raise MessageWarningException(argument=tmpmsg.packet_message_type, message=f"Unknown Type for {message} type:")
+        try:
+            if tmpmsg.packet_message_type == 0:
+                value_raw = value.to_bytes(1, byteorder='big', signed=True) 
+            elif tmpmsg.packet_message_type == 1:
+                value_raw = value.to_bytes(2, byteorder='big', signed=True) 
+            elif tmpmsg.packet_message_type == 2:
+                value_raw = value.to_bytes(4, byteorder='big', signed=True) 
+            else:
+                raise MessageWarningException(argument=tmpmsg.packet_message_type, message=f"Unknown Type for {message} type:")
+        except (OverflowError, ValueError) as e:
+            logger.warning(f"Value {value} too large for message type {tmpmsg.packet_message_type}, using 0")
+            value = 0
+            if tmpmsg.packet_message_type == 0:
+                value_raw = value.to_bytes(1, byteorder='big', signed=True) 
+            elif tmpmsg.packet_message_type == 1:
+                value_raw = value.to_bytes(2, byteorder='big', signed=True) 
+            elif tmpmsg.packet_message_type == 2:
+                value_raw = value.to_bytes(4, byteorder='big', signed=True) 
+                
         tmpmsg.set_packet_payload_raw(value_raw)
         return tmpmsg
 

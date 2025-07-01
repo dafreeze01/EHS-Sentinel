@@ -150,13 +150,18 @@ class MQTTClient:
                 self.auto_discover_hass(name)
                 self.refresh_known_devices(name)
 
-            if self.config.NASA_REPO[name]['hass_opts']['writable']:
-                if 'platform' in self.config.NASA_REPO[name]['hass_opts'] and 'type' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+            # Safe platform type determination
+            sensor_type = "sensor"  # Default fallback
+            try:
+                if (self.config.NASA_REPO[name]['hass_opts']['writable'] and 
+                    'platform' in self.config.NASA_REPO[name]['hass_opts'] and 
+                    'type' in self.config.NASA_REPO[name]['hass_opts']['platform']):
                     sensor_type = self.config.NASA_REPO[name]['hass_opts']['platform']['type']
                 else:
                     sensor_type = self.config.NASA_REPO[name]['hass_opts']['default_platform']
-            else:
-                sensor_type = self.config.NASA_REPO[name]['hass_opts']['default_platform']
+            except KeyError:
+                sensor_type = "sensor"
+                
             topicname = f"{self.config.MQTT['homeAssistantAutoDiscoverTopic']}/{sensor_type}/{self.DEVICE_ID}_{newname.lower()}/state"
         else:
             topicname = f"{self.topicPrefix.replace('/', '')}/{newname}"
@@ -170,13 +175,17 @@ class MQTTClient:
         entities = {}
         for nasa in self.config.NASA_REPO:
             namenorm = self._normalize_name(nasa)
-            if self.config.NASA_REPO[nasa]['hass_opts']['writable']:
-                if 'platform' in self.config.NASA_REPO[nasa]['hass_opts'] and 'type' in self.config.NASA_REPO[nasa]['hass_opts']['platform']:
+            sensor_type = "sensor"  # Default fallback
+            try:
+                if (self.config.NASA_REPO[nasa]['hass_opts']['writable'] and 
+                    'platform' in self.config.NASA_REPO[nasa]['hass_opts'] and 
+                    'type' in self.config.NASA_REPO[nasa]['hass_opts']['platform']):
                     sensor_type = self.config.NASA_REPO[nasa]['hass_opts']['platform']['type']
                 else:
                     sensor_type = self.config.NASA_REPO[nasa]['hass_opts']['default_platform']
-            else:
-                sensor_type = self.config.NASA_REPO[nasa]['hass_opts']['default_platform']
+            except KeyError:
+                sensor_type = "sensor"
+                
             entities[namenorm] = {"platform": sensor_type}
         
         device = {
@@ -206,44 +215,75 @@ class MQTTClient:
                 "value_template": "{{ value }}"
                 #"value_template": "{{ value if value | length > 0 else 'unavailable' }}",
             }
-        if self.config.NASA_REPO[name]['hass_opts']['writable'] and self.config.GENERAL['allowControl']:
-            if 'platform' in self.config.NASA_REPO[name]['hass_opts'] and 'type' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+        
+        # Safe platform type determination with comprehensive error handling
+        sensor_type = "sensor"  # Default fallback
+        try:
+            if (self.config.NASA_REPO[name]['hass_opts']['writable'] and 
+                self.config.GENERAL['allowControl'] and
+                'platform' in self.config.NASA_REPO[name]['hass_opts'] and 
+                'type' in self.config.NASA_REPO[name]['hass_opts']['platform']):
+                
                 sensor_type = self.config.NASA_REPO[name]['hass_opts']['platform']['type']
+                
+                # Safe attribute access for select type
                 if sensor_type == 'select':
                     if 'options' in self.config.NASA_REPO[name]['hass_opts']['platform']:
                         entity['options'] = self.config.NASA_REPO[name]['hass_opts']['platform']['options']
+                        
+                # Safe attribute access for number type
                 if sensor_type == 'number':
-                    if 'mode' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-                        entity['mode'] = self.config.NASA_REPO[name]['hass_opts']['platform']['mode']
-                    if 'min' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-                        entity['min'] = self.config.NASA_REPO[name]['hass_opts']['platform']['min']
-                    if 'max' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-                        entity['max'] = self.config.NASA_REPO[name]['hass_opts']['platform']['max']
-                    if 'step' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-                        entity['step'] = self.config.NASA_REPO[name]['hass_opts']['platform']['step']
+                    platform_opts = self.config.NASA_REPO[name]['hass_opts']['platform']
+                    if 'mode' in platform_opts:
+                        entity['mode'] = platform_opts['mode']
+                    if 'min' in platform_opts:
+                        entity['min'] = platform_opts['min']
+                    if 'max' in platform_opts:
+                        entity['max'] = platform_opts['max']
+                    if 'step' in platform_opts:
+                        entity['step'] = platform_opts['step']
                         
                 entity['command_topic'] = f"{self.topicPrefix.replace('/', '')}/entity/{name}/set"
                 entity['optimistic'] = False
             else:
                 sensor_type = self.config.NASA_REPO[name]['hass_opts']['default_platform']
-        else:
-            sensor_type = self.config.NASA_REPO[name]['hass_opts']['default_platform']
+        except KeyError as e:
+            logger.warning(f"Missing configuration for {name}: {e}, using default sensor type")
+            sensor_type = "sensor"
 
-        if 'unit' in self.config.NASA_REPO[name]['hass_opts']:
-            entity['unit_of_measurement'] = self.config.NASA_REPO[name]['hass_opts']['unit']
+        # Safe unit assignment
+        try:
+            if 'unit' in self.config.NASA_REPO[name]['hass_opts']:
+                entity['unit_of_measurement'] = self.config.NASA_REPO[name]['hass_opts']['unit']
+        except KeyError:
+            pass
 
         entity['platform'] = sensor_type
         entity['state_topic'] = f"{self.config.MQTT['homeAssistantAutoDiscoverTopic']}/{sensor_type}/{self.DEVICE_ID}_{namenorm.lower()}/state"
 
-        if 'platform' in self.config.NASA_REPO[name]['hass_opts']:
-            if 'payload_off' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-                entity['payload_off'] = "OFF"
-            if 'payload_on' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-                entity['payload_on'] = "ON"
-        if 'state_class' in self.config.NASA_REPO[name]['hass_opts']:
-            entity['state_class'] = self.config.NASA_REPO[name]['hass_opts']['state_class']
-        if 'device_class' in self.config.NASA_REPO[name]['hass_opts']:
-            entity['device_class'] = self.config.NASA_REPO[name]['hass_opts']['device_class']
+        # Safe payload assignment
+        try:
+            if 'platform' in self.config.NASA_REPO[name]['hass_opts']:
+                platform_opts = self.config.NASA_REPO[name]['hass_opts']['platform']
+                if 'payload_off' in platform_opts:
+                    entity['payload_off'] = "OFF"
+                if 'payload_on' in platform_opts:
+                    entity['payload_on'] = "ON"
+        except KeyError:
+            pass
+            
+        # Safe state_class and device_class assignment
+        try:
+            if 'state_class' in self.config.NASA_REPO[name]['hass_opts']:
+                entity['state_class'] = self.config.NASA_REPO[name]['hass_opts']['state_class']
+        except KeyError:
+            pass
+            
+        try:
+            if 'device_class' in self.config.NASA_REPO[name]['hass_opts']:
+                entity['device_class'] = self.config.NASA_REPO[name]['hass_opts']['device_class']
+        except KeyError:
+            pass
 
         device = {
             "device": self._get_device(),

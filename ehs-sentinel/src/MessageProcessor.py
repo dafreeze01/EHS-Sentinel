@@ -33,7 +33,9 @@ class MessageProcessor:
                 try:
                     msgvalue = self.determine_value(msg.packet_payload, msgname, msg.packet_message_type)
                 except Exception as e:
-                    raise MessageWarningException(argument=f"{msg.packet_payload}/{[hex(x) for x in msg.packet_payload]}", message=f"Value of {hexmsg} couldn't be determinate, skip Message {e}")
+                    logger.warning(f"Value of {hexmsg} couldn't be determined, using raw value: {e}")
+                    # Use raw value as fallback
+                    msgvalue = int.from_bytes(msg.packet_payload, byteorder='big', signed=True)
                 await self.protocolMessage(msg, msgname, msgvalue)
             else:
                 packedval = int.from_bytes(msg.packet_payload, byteorder='big', signed=True)
@@ -118,8 +120,12 @@ class MessageProcessor:
             
             #logger.info(f"{msgname} Structure: {rawvalue} type of {value}")
         else:
+            # Fix arithmetic replacement issue
             if 'arithmetic' in self.config.NASA_REPO[msgname]:
-                arithmetic = self.config.NASA_REPO[msgname]['arithmetic'].replace("value", 'packed_value')
+                arithmetic = self.config.NASA_REPO[msgname]['arithmetic']
+                # Only replace 'value' with 'packed_value', not 'packed_value' with 'packed_packed_value'
+                if 'packed_value' not in arithmetic:
+                    arithmetic = arithmetic.replace("value", 'packed_value')
             else: 
                 arithmetic = ''
 
