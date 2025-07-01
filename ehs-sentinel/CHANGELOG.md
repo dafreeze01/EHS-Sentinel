@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.2.8] - 2025-01-XX
+## [1.3.0] - 2025-07-01
 
 ### 🔧 Kritische Verbesserungen
 - **ENHANCED**: Automatische Geräteerstellung für alle 161 verfügbaren Sensoren
@@ -8,22 +8,26 @@
 - **FIXED**: Reduzierte Log-Spam bei ungültigen Paketen (nur noch DEBUG-Level)
 - **ADDED**: Einheitliche Versionierung über config.yaml mit Pre-Commit-Hook
 - **ENHANCED**: Verbesserte Auto-Discovery nach MQTT-Verbindung und HASS-Reset
+- **FIXED**: Korrektur der KeyError-Fehler in PacketMonitor.py ('last_reset', 'valid_packets', 'hourly')
 
 ### ✨ Neue Features
 - **Added**: `create_all_devices()` Methode erstellt alle Sensoren automatisch
 - **Added**: Flag `auto_discovery_completed` verhindert Doppelausführung
 - **Added**: Versionierung aus config.yaml in startEHSSentinel.py
 - **Added**: Intelligente Berichterstattung nur bei signifikanten Datenmengen
+- **Added**: Robustere Fehlerbehandlung in log_invalid_packet mit Try-Except
 
 ### 🛡️ Sicherheitsverbesserungen
 - **Enhanced**: Fehlerrate-Schwellwert von 5% auf 15% erhöht (realistischer für RS485)
 - **Enhanced**: Ungültige Pakete nur noch alle 1000 Pakete gewarnt
 - **Enhanced**: Statistiken nur alle 100/1000 Pakete gespeichert (Performance)
+- **Enhanced**: Vollständige Initialisierung aller Statistik-Strukturen
 
 ### 🏗️ Architektur-Verbesserungen
 - **Refactored**: Pre-Commit-Script nutzt jetzt config.yaml für Versionierung
 - **Improved**: Automatische Sensor-Erstellung nach MQTT-Verbindung
 - **Enhanced**: Bessere Toleranz für RS485-Kommunikationsfehler
+- **Fixed**: Korrektur der Präfix-Entfernung für STR_-Sensoren
 
 ### 📊 Dashboard-Optimierungen
 - **Enhanced**: Alle 161 Sensoren werden als Home Assistant Entities erstellt
@@ -34,13 +38,14 @@
 - **Added**: YAML-Import für Versionierung aus config.yaml
 - **Enhanced**: Robuste Fehlerbehandlung bei Versionsextraktion
 - **Improved**: Einheitliche Versionsnummer über alle Komponenten
+- **Fixed**: Korrektur der state_topic-Generierung mit korrektem Präfix
 
 ### 🚨 Migration Notes
 - **IMPORTANT**: Pre-Commit-Hook nutzt jetzt config.yaml für Versionierung
 - **CONFIG**: Alle Sensoren werden automatisch erstellt, auch ohne Daten
 - **MONITORING**: Paketqualitäts-Schwellwert auf 15% erhöht
 
-## [1.2.6] - 2025-01-XX
+## [1.2.8] - 2025-01-XX
 
 ### 🔧 Kritische Verbesserungen
 - **ENHANCED**: Automatische Geräteerstellung für alle 161 verfügbaren Sensoren
