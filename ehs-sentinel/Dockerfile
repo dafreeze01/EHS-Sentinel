@@ -4,6 +4,7 @@ FROM $BUILD_FROM
 # Install Python and dependencies
 RUN apk add --no-cache \
     python3 \
+    python3-dev \
     py3-pip \
     py3-setuptools \
     py3-wheel \
