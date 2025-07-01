@@ -356,7 +356,7 @@ class MQTTClient:
         logger.debug(f"Auto Discovery HomeAssistant Message: ")
         logger.debug(f"{device}")
 
-        self._publish(f"{self.config.MQTT['homeAssistantAutoDiscoverTopic']}/{sensor_type}/{self.DEVICE_ID}_{name.lower()}/config",
+        self._publish(f"{self.homeAssistantAutoDiscoverTopic}/{sensor_type}/{self.DEVICE_ID}_{name.lower()}/config",
                       json.dumps(device, ensure_ascii=False),
                       qos=2, 
                       retain=True)
