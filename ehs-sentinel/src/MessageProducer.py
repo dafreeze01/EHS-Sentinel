@@ -17,7 +17,6 @@ class MessageProducer:
 
     _instance = None
     _CHUNKSIZE = 10 # message requests list will be split into this chunks, experience have shown that more then 10 are too much for an packet
-    writer = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -25,14 +24,22 @@ class MessageProducer:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, writer: asyncio.StreamWriter):
+    def __init__(self, writer: asyncio.StreamWriter = None):
         if self._initialized:
             return
         self._initialized = True
         self.writer = writer
         self.config = EHSConfig()
 
+    def set_writer(self, writer: asyncio.StreamWriter):
+        """Set or update the writer for this producer"""
+        self.writer = writer
+
     async def read_request(self, list_of_messages: list):
+        if self.writer is None:
+            logger.error("Cannot send read request - no writer available")
+            return
+            
         chunks = [list_of_messages[i:i + self._CHUNKSIZE] for i in range(0, len(list_of_messages), self._CHUNKSIZE)]
         for chunk in chunks:
             await asyncio.sleep(0.5)
@@ -46,6 +53,10 @@ class MessageProducer:
                 logger.debug(f"Sent data NASAPacket: {nasa_packet}")
 
     async def write_request(self, message: str, value: str | int, read_request_after=False):
+        if self.writer is None:
+            logger.error(f"Cannot send write request for {message} - no writer available")
+            return
+            
         try:
             # Ensure value is properly converted
             if isinstance(value, str):
@@ -187,6 +198,10 @@ class MessageProducer:
         return nasa_msg
 
     async def _write_packet_to_serial(self, packet: NASAPacket):
+        if self.writer is None:
+            logger.error("Cannot write packet - no writer available")
+            return
+            
         final_packet = packet.to_raw()
         self.writer.write(final_packet)
         await self.writer.drain()

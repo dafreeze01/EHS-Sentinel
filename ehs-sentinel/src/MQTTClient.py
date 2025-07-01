@@ -11,7 +11,6 @@ import gmqtt
 from CustomLogger import logger
 from EHSArguments import EHSArguments
 from EHSConfig import EHSConfig
-from MessageProducer import MessageProducer
 
 class MQTTClient:
     """
@@ -57,6 +56,10 @@ class MQTTClient:
         self.initialized = True
         self.known_topics: list = list()  # Set to keep track of known topics
         self.known_devices_topic = "known/devices"  # Dedicated topic for storing known topics
+
+    def set_message_producer(self, producer):
+        """Set the message producer instance with proper writer"""
+        self.message_producer = producer
 
     async def connect(self):
         logger.info("[MQTT] Connecting to broker...")
@@ -106,9 +109,10 @@ class MQTTClient:
         if topic.startswith(f"{self.topicPrefix.replace('/', '')}/entity"):
             logger.info(f"HASS Set Entity Messages {topic} received: {payload.decode()}")
             parts = topic.split("/")
-            if self.message_producer is None:
-                self.message_producer = MessageProducer(None)
-            asyncio.create_task(self.message_producer.write_request(parts[2], payload.decode(), read_request_after=True))
+            if self.message_producer is not None:
+                asyncio.create_task(self.message_producer.write_request(parts[2], payload.decode(), read_request_after=True))
+            else:
+                logger.warning(f"Cannot process control message - MessageProducer not available")
 
     def on_connect(self, client, flags, rc, properties):
         if rc == 0:

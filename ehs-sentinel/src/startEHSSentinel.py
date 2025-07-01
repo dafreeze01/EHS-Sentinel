@@ -31,7 +31,8 @@ build_info = {
         "Fixed MessageProducer string conversion",
         "Fixed MQTTClient platform KeyError",
         "Added comprehensive error handling",
-        "Added graceful fallback values"
+        "Added graceful fallback values",
+        "Fixed MessageProducer writer initialization"
     ]
 }
 
@@ -75,7 +76,7 @@ async def main():
     await asyncio.sleep(1)
 
     # we are not in dryrun mode for addon, so we need to read from Serial Port
-    await serial_connection(config, args)
+    await serial_connection(config, args, mqtt)
 
 async def process_buffer(buffer, args, config):
     if buffer:
@@ -90,7 +91,7 @@ async def process_buffer(buffer, args, config):
         else:
             logger.debug(f"Buffer to short for NASA {len(buffer)}")
 
-async def serial_connection(config, args):
+async def serial_connection(config, args, mqtt):
     buffer = []
     loop = asyncio.get_running_loop()
 
@@ -110,7 +111,7 @@ async def serial_connection(config, args):
         
     await asyncio.gather(
             serial_read(reader, args, config),
-            serial_write(writer, config),
+            serial_write(writer, config, mqtt),
         )
 
 async def serial_read(reader: asyncio.StreamReader, args, config):
@@ -155,8 +156,12 @@ async def serial_read(reader: asyncio.StreamReader, args, config):
 
             prev_byte = current_byte
 
-async def serial_write(writer:asyncio.StreamWriter, config):
-    producer = MessageProducer(writer=writer)
+async def serial_write(writer:asyncio.StreamWriter, config, mqtt):
+    # Create MessageProducer with proper writer
+    producer = MessageProducer(writer)
+    
+    # Set the producer in MQTT client for control messages
+    mqtt.set_message_producer(producer)
 
     # Wait 20s before initial polling
     await asyncio.sleep(20)
