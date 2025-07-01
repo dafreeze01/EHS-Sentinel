@@ -1,16 +1,37 @@
-# Version mit automatischem Timestamp aus config.yaml
-import yaml
+import asyncio
+import serial
+import serial_asyncio
+import traceback
+import json
 import os
+import datetime
+import yaml
+from MessageProcessor import MessageProcessor
+from MessageProducer import MessageProducer
+from EHSArguments import EHSArguments
+from EHSConfig import EHSConfig
+from EHSExceptions import MessageWarningException, SkipInvalidPacketException
+from MQTTClient import MQTTClient
+from PollingManager import PollingManager
+from PacketMonitor import PacketMonitor
+import aiofiles
+import random
+
+# Get the logger
+from CustomLogger import logger
+from NASAPacket import NASAPacket, AddressClassEnum, PacketType, DataType
+from NASAMessage import NASAMessage
 
 def get_version_from_config():
     """Lädt die Version aus der config.yaml"""
     try:
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'config.yaml')
+        # Korrekter Pfad zur config.yaml
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.yaml')
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
             return config.get('version', '1.0.0')
     except Exception as e:
-        logger.warning(f"Konnte Version nicht aus config.yaml laden: {e}")
+        # Fallback-Version, wenn die Datei nicht gelesen werden kann
         return '1.0.0'
 
 # Lade Version aus config.yaml
