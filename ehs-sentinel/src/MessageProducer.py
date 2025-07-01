@@ -46,59 +46,75 @@ class MessageProducer:
                 logger.debug(f"Sent data NASAPacket: {nasa_packet}")
 
     async def write_request(self, message: str, value: str | int, read_request_after=False):
-        nasa_packet = self._build_default_request_packet()
-        nasa_packet.set_packet_messages([self._build_message(message.strip(), self._decode_value(message.strip(), value.strip()))])
-        nasa_packet.to_raw()
-        if self.config.LOGGING['controlMessage']:
-            logger.info(f"Write request for {message} with value: {value}")
-            logger.info(f"Sending NASA packet: {nasa_packet}")
-        else:
-            logger.debug(f"Write request for {message} with value: {value}")
-            logger.debug(f"Sending NASA packet: {nasa_packet}")
-        await self._write_packet_to_serial(nasa_packet)
-        await asyncio.sleep(1)
-        await self.read_request([message])      
+        try:
+            decoded_value = self._decode_value(message.strip(), str(value).strip())
+            nasa_packet = self._build_default_request_packet()
+            nasa_packet.set_packet_messages([self._build_message(message.strip(), decoded_value)])
+            nasa_packet.to_raw()
+            if self.config.LOGGING['controlMessage']:
+                logger.info(f"Write request for {message} with value: {value}")
+                logger.info(f"Sending NASA packet: {nasa_packet}")
+            else:
+                logger.debug(f"Write request for {message} with value: {value}")
+                logger.debug(f"Sending NASA packet: {nasa_packet}")
+            await self._write_packet_to_serial(nasa_packet)
+            await asyncio.sleep(1)
+            await self.read_request([message])
+        except Exception as e:
+            logger.error(f"Error in write_request for {message} with value {value}: {e}")
 
     def _search_nasa_enumkey_for_value(self, message, value):
         if 'type' in self.config.NASA_REPO[message] and self.config.NASA_REPO[message]['type'] == 'ENUM':
-            for key, val in self.config.NASA_REPO[message]['enum'].items():
-                if val == value:
-                    return key
+            if 'enum' in self.config.NASA_REPO[message]:
+                for key, val in self.config.NASA_REPO[message]['enum'].items():
+                    if val == value:
+                        return key
                 
         return None
     
     def is_number(self, s):
-        return s.replace('+','',1).replace('-','',1).replace('.','',1).isdigit()
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
 
     def _decode_value(self, message, value) -> int:  
         enumval = self._search_nasa_enumkey_for_value(message, value)
         if enumval is None:
             if self.is_number(value):
                 try:
-                    value = int(value)
-                except ValueError as e:
-                    value = float(value)
+                    numeric_value = int(float(value))
+                except ValueError:
+                    numeric_value = 0
 
                 if 'reverse-arithmetic' in self.config.NASA_REPO[message]:
                     arithmetic = self.config.NASA_REPO[message]['reverse-arithmetic']
-                else: 
-                    arithmetic = ''
-                if len(arithmetic) > 0:
                     try:
-                        return int(eval(arithmetic))
+                        return int(eval(arithmetic.replace('value', str(numeric_value))))
                     except Exception as e:
-                        logger.warning(f"Arithmetic Function couldn't been applied for Message {message}, using raw value: reverse-arithmetic = {arithmetic} {e} {value}")
-                        return value
+                        logger.warning(f"Arithmetic Function couldn't been applied for Message {message}, using raw value: reverse-arithmetic = {arithmetic} {e} {numeric_value}")
+                        return numeric_value
+                else:
+                    return numeric_value
         else:
-            value = int(enumval)
+            return int(enumval)
 
-        return value
+        return 0
 
     def _build_message(self, message, value=None) -> NASAMessage:
         tmpmsg = NASAMessage()
         tmpmsg.set_packet_message(self._extract_address(message))
         if value is None:
             value = 0
+        
+        # Ensure value is an integer
+        if isinstance(value, str):
+            try:
+                value = int(float(value))
+            except ValueError:
+                value = 0
+        
         if tmpmsg.packet_message_type == 0:
             value_raw = value.to_bytes(1, byteorder='big', signed=True) 
         elif tmpmsg.packet_message_type == 1:
@@ -149,4 +165,3 @@ class MessageProducer:
         final_packet = packet.to_raw()
         self.writer.write(final_packet)
         await self.writer.drain()
-    

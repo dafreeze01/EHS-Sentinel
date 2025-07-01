@@ -46,8 +46,9 @@ class MQTTClient:
         self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
         self.client.on_subscribe = self.on_subscribe
-        if self.config.MQTT['user'] and self.config.MQTT['password']:
-            self.client.set_auth_credentials(self.config.MQTT['user'], self.config.MQTT['password'])
+        if 'user' in self.config.MQTT and 'password' in self.config.MQTT:
+            if self.config.MQTT['user'] and self.config.MQTT['password']:
+                self.client.set_auth_credentials(self.config.MQTT['user'], self.config.MQTT['password'])
         self.topicPrefix = self.config.MQTT['topicPrefix']
         self.homeAssistantAutoDiscoverTopic = self.config.MQTT['homeAssistantAutoDiscoverTopic']
         self.useCamelCaseTopicNames = self.config.MQTT['useCamelCaseTopicNames']
@@ -60,7 +61,7 @@ class MQTTClient:
         logger.info("[MQTT] Connecting to broker...")
         await self.client.connect(self.broker, self.port, keepalive=60, version=gmqtt.constants.MQTTv311)
 
-        if self.args.CLEAN_KNOWN_DEVICES:
+        if hasattr(self.args, 'CLEAN_KNOWN_DEVICES') and self.args.CLEAN_KNOWN_DEVICES:
             self._publish(f"{self.topicPrefix.replace('/', '')}/{self.known_devices_topic}", " ", retain=True)
             logger.info("Known Devices Topic have been cleared")
 
@@ -150,7 +151,10 @@ class MQTTClient:
                 self.refresh_known_devices(name)
 
             if self.config.NASA_REPO[name]['hass_opts']['writable']:
-                sensor_type = self.config.NASA_REPO[name]['hass_opts']['platform']['type']
+                if 'platform' in self.config.NASA_REPO[name]['hass_opts'] and 'type' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                    sensor_type = self.config.NASA_REPO[name]['hass_opts']['platform']['type']
+                else:
+                    sensor_type = self.config.NASA_REPO[name]['hass_opts']['default_platform']
             else:
                 sensor_type = self.config.NASA_REPO[name]['hass_opts']['default_platform']
             topicname = f"{self.config.MQTT['homeAssistantAutoDiscoverTopic']}/{sensor_type}/{self.DEVICE_ID}_{newname.lower()}/state"
@@ -167,7 +171,10 @@ class MQTTClient:
         for nasa in self.config.NASA_REPO:
             namenorm = self._normalize_name(nasa)
             if self.config.NASA_REPO[nasa]['hass_opts']['writable']:
-                sensor_type = self.config.NASA_REPO[nasa]['hass_opts']['platform']['type']
+                if 'platform' in self.config.NASA_REPO[nasa]['hass_opts'] and 'type' in self.config.NASA_REPO[nasa]['hass_opts']['platform']:
+                    sensor_type = self.config.NASA_REPO[nasa]['hass_opts']['platform']['type']
+                else:
+                    sensor_type = self.config.NASA_REPO[nasa]['hass_opts']['default_platform']
             else:
                 sensor_type = self.config.NASA_REPO[nasa]['hass_opts']['default_platform']
             entities[namenorm] = {"platform": sensor_type}
@@ -200,18 +207,25 @@ class MQTTClient:
                 #"value_template": "{{ value if value | length > 0 else 'unavailable' }}",
             }
         if self.config.NASA_REPO[name]['hass_opts']['writable'] and self.config.GENERAL['allowControl']:
-            sensor_type = self.config.NASA_REPO[name]['hass_opts']['platform']['type']
-            if sensor_type == 'select':
-                entity['options'] = self.config.NASA_REPO[name]['hass_opts']['platform']['options']
-            if sensor_type == 'number':
-                entity['mode'] = self.config.NASA_REPO[name]['hass_opts']['platform']['mode']
-                entity['min'] = self.config.NASA_REPO[name]['hass_opts']['platform']['min']
-                entity['max'] = self.config.NASA_REPO[name]['hass_opts']['platform']['max']
-                if 'step' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-                    entity['step'] = self.config.NASA_REPO[name]['hass_opts']['platform']['step']
-                    
-            entity['command_topic'] = f"{self.topicPrefix.replace('/', '')}/entity/{name}/set"
-            entity['optimistic'] = False
+            if 'platform' in self.config.NASA_REPO[name]['hass_opts'] and 'type' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                sensor_type = self.config.NASA_REPO[name]['hass_opts']['platform']['type']
+                if sensor_type == 'select':
+                    if 'options' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                        entity['options'] = self.config.NASA_REPO[name]['hass_opts']['platform']['options']
+                if sensor_type == 'number':
+                    if 'mode' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                        entity['mode'] = self.config.NASA_REPO[name]['hass_opts']['platform']['mode']
+                    if 'min' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                        entity['min'] = self.config.NASA_REPO[name]['hass_opts']['platform']['min']
+                    if 'max' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                        entity['max'] = self.config.NASA_REPO[name]['hass_opts']['platform']['max']
+                    if 'step' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                        entity['step'] = self.config.NASA_REPO[name]['hass_opts']['platform']['step']
+                        
+                entity['command_topic'] = f"{self.topicPrefix.replace('/', '')}/entity/{name}/set"
+                entity['optimistic'] = False
+            else:
+                sensor_type = self.config.NASA_REPO[name]['hass_opts']['default_platform']
         else:
             sensor_type = self.config.NASA_REPO[name]['hass_opts']['default_platform']
 
@@ -221,10 +235,11 @@ class MQTTClient:
         entity['platform'] = sensor_type
         entity['state_topic'] = f"{self.config.MQTT['homeAssistantAutoDiscoverTopic']}/{sensor_type}/{self.DEVICE_ID}_{namenorm.lower()}/state"
 
-        if 'payload_off' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-            entity['payload_off'] = "OFF"
-        if 'payload_on' in self.config.NASA_REPO[name]['hass_opts']['platform']:
-            entity['payload_on'] = "ON"
+        if 'platform' in self.config.NASA_REPO[name]['hass_opts']:
+            if 'payload_off' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                entity['payload_off'] = "OFF"
+            if 'payload_on' in self.config.NASA_REPO[name]['hass_opts']['platform']:
+                entity['payload_on'] = "ON"
         if 'state_class' in self.config.NASA_REPO[name]['hass_opts']:
             entity['state_class'] = self.config.NASA_REPO[name]['hass_opts']['state_class']
         if 'device_class' in self.config.NASA_REPO[name]['hass_opts']:

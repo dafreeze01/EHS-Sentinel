@@ -55,6 +55,7 @@ DHW_POWER:
   enum:
     0: "OFF"
     1: "ON"
+    2: "UNKNOWN"
   hass_opts:
     default_platform: "binary_sensor"
     writable: false
@@ -88,6 +89,7 @@ NASA_OUTDOOR_DEFROST_STEP:
     4: "STEP_4"
     5: "STEP_5"
     10: "DEFROST_STEP_10"
+    255: "UNKNOWN"
   hass_opts:
     default_platform: "sensor"
     writable: false

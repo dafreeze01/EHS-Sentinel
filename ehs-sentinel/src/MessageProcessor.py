@@ -139,7 +139,13 @@ class MessageProcessor:
             if 'type' in self.config.NASA_REPO[msgname]:
                 if self.config.NASA_REPO[msgname]['type'] == 'ENUM':
                     if 'enum' in self.config.NASA_REPO[msgname]:
-                        value = self.config.NASA_REPO[msgname]['enum'][int.from_bytes(rawvalue, byteorder='big')]
+                        raw_value = int.from_bytes(rawvalue, byteorder='big')
+                        if raw_value in self.config.NASA_REPO[msgname]['enum']:
+                            value = self.config.NASA_REPO[msgname]['enum'][raw_value]
+                        else:
+                            # Handle unknown enum values gracefully
+                            logger.warning(f"Unknown enum value {raw_value} for {msgname}, using raw value")
+                            value = raw_value
                     else:
                         value = f"Unknown enum value: {value}"
                 
