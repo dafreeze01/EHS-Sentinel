@@ -20,22 +20,19 @@ from NASAPacket import NASAPacket, AddressClassEnum, PacketType, DataType
 from NASAMessage import NASAMessage
 
 # Version mit automatischem Timestamp
-VERSION_BASE = "1.1.0"
+VERSION_BASE = "1.2.0"
 VERSION_PATCH = "1"
 version = f"{VERSION_BASE}.{VERSION_PATCH}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
 build_info = {
     "version": f"{VERSION_BASE}.{VERSION_PATCH}",
     "build_date": datetime.datetime.now().isoformat(),
     "build_type": "Home Assistant Addon",
-    "fixes": [
-        "Fixed arithmetic double-replacement bug",
-        "Fixed enum KeyError handling", 
-        "Fixed MessageProducer string conversion",
-        "Fixed MQTTClient platform KeyError",
-        "Added comprehensive error handling",
-        "Added graceful fallback values",
-        "Fixed MessageProducer writer initialization",
-        "Fixed serial/TCP connection handling"
+    "features": [
+        "Comprehensive sensor polling (ALL sensors)",
+        "Secure arithmetic evaluation (SafeArithmetic)",
+        "Enhanced error handling with graceful fallbacks",
+        "Improved logging with configurable levels",
+        "Complete code consolidation and cleanup"
     ]
 }
 
@@ -60,9 +57,9 @@ async def main():
     logger.info(f"   Version: {build_info['version']}")
     logger.info(f"   Build Date: {build_info['build_date']}")
     logger.info(f"   Build Type: {build_info['build_type']}")
-    logger.info(f"🔧 Recent Fixes:")
-    for fix in build_info['fixes']:
-        logger.info(f"   ✅ {fix}")
+    logger.info(f"🔧 New Features:")
+    for feature in build_info['features']:
+        logger.info(f"   ✅ {feature}")
     logger.info(f"👨‍💻 Written by echoDave")
     logger.info("")
 
@@ -208,24 +205,35 @@ async def serial_write(writer:asyncio.StreamWriter, config, mqtt):
                 asyncio.create_task(make_default_request_packet(producer=producer, config=config, poller=poller))
 
 async def make_default_request_packet(producer: MessageProducer, config: EHSConfig, poller):
-    logger.info(f"Setting up Poller {poller['name']} every {poller['schedule']} seconds")
-    message_list = []
-    for message in config.POLLING['groups'][poller['name']]:
-        message_list.append(message)
+    group_name = poller['name']
+    schedule = poller['schedule']
+    message_list = config.POLLING['groups'][group_name]
+    
+    logger.info(f"🔄 Setting up Poller '{group_name}' every {schedule} seconds")
+    logger.info(f"📊 Polling {len(message_list)} sensors in group '{group_name}'")
+    
+    # Log first few sensors for verification
+    if len(message_list) > 0:
+        sample_sensors = message_list[:5]
+        logger.info(f"📋 Sample sensors: {', '.join(sample_sensors)}")
+        if len(message_list) > 5:
+            logger.info(f"   ... and {len(message_list) - 5} more sensors")
 
     while True:
         try:
             await producer.read_request(message_list)
+            logger.info(f"✅ Polled {len(message_list)} sensors from group '{group_name}'")
         except MessageWarningException as e:
-            logger.warning("Polling Messages was not successful")
+            logger.warning(f"⚠️ Polling Messages was not successful for group '{group_name}'")
             logger.warning(f"Error processing message: {e}")
             logger.warning(f"Message List: {message_list}")
         except Exception as e:
-            logger.error("Error Occurred, Polling will be skipped")
+            logger.error(f"❌ Error Occurred, Polling will be skipped for group '{group_name}'")
             logger.error(f"Error processing message: {e}")
             logger.error(traceback.format_exc())
-        await asyncio.sleep(poller['schedule'])
-        logger.info(f"Refresh Poller {poller['name']}")
+        
+        await asyncio.sleep(schedule)
+        logger.debug(f"🔄 Refresh Poller '{group_name}' - next poll in {schedule}s")
 
 async def process_packet(buffer, args, config):
     try:

@@ -11,7 +11,7 @@ from CustomLogger import logger
 class EHSConfig():
     """
     Singleton class to handle the configuration for the EHS Sentinel application.
-    Modified for Home Assistant Addon support with improved polling configuration.
+    Modified for Home Assistant Addon support with comprehensive sensor polling.
     """
 
     _instance = None
@@ -108,65 +108,34 @@ class EHSConfig():
                 'baudrate': addon_config.get('serial_baudrate', 9600)
             }
 
-        # Enhanced Polling configuration
+        # Enhanced Polling configuration - Poll ALL available sensors
         if addon_config.get('polling_aktiviert', False):
-            polling_intervals = addon_config.get('polling_intervalle', {})
-            
-            config['polling'] = {
-                'fetch_interval': [
-                    {'name': 'basic_sensors', 'enable': True, 'schedule': polling_intervals.get('basic_sensors', 30)},
-                    {'name': 'fsv10xx', 'enable': True, 'schedule': polling_intervals.get('fsv10xx', 300)},
-                    {'name': 'fsv20xx', 'enable': True, 'schedule': polling_intervals.get('fsv20xx', 600)},
-                    {'name': 'fsv30xx', 'enable': True, 'schedule': polling_intervals.get('fsv30xx', 900)},
-                    {'name': 'fsv40xx', 'enable': True, 'schedule': polling_intervals.get('fsv40xx', 1200)},
-                    {'name': 'fsv50xx', 'enable': True, 'schedule': polling_intervals.get('fsv50xx', 1800)}
-                ],
-                'groups': {
-                    'basic_sensors': [
-                        'NASA_POWER', 'NASA_INDOOR_OPMODE', 'NASA_OUTDOOR_OPERATION_STATUS', 
-                        'NASA_OUTDOOR_TW1_TEMP', 'NASA_OUTDOOR_TW2_TEMP', 'NASA_OUTDOOR_OUT_TEMP',
-                        'NASA_INDOOR_DHW_CURRENT_TEMP', 'NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT',
-                        'NASA_OUTDOOR_COMP1_RUN_HZ', 'NASA_OUTDOOR_COMP1_TARGET_HZ', 'VAR_IN_FLOW_SENSOR_CALC'
+            # Load NASA Repository first to get all available sensors
+            nasa_repo_path = '/app/data/NasaRepository.yml'
+            if os.path.isfile(nasa_repo_path):
+                with open(nasa_repo_path, mode='r') as file:
+                    nasa_repo = yaml.safe_load(file)
+                
+                # Get all sensor names from NASA Repository
+                all_sensors = list(nasa_repo.keys())
+                
+                logger.info(f"📊 Gefunden: {len(all_sensors)} Sensoren in NASA Repository")
+                logger.info(f"🔄 Konfiguriere Polling für ALLE verfügbaren Sensoren...")
+                
+                # Create a single group with ALL sensors
+                config['polling'] = {
+                    'fetch_interval': [
+                        {'name': 'all_sensors', 'enable': True, 'schedule': 60}  # Poll all sensors every 60 seconds
                     ],
-                    'fsv10xx': [
-                        'VAR_IN_FSV_1011', 'VAR_IN_FSV_1012', 'VAR_IN_FSV_1021', 'VAR_IN_FSV_1022',
-                        'VAR_IN_FSV_1031', 'VAR_IN_FSV_1032', 'VAR_IN_FSV_1041', 'VAR_IN_FSV_1042',
-                        'VAR_IN_FSV_1051', 'VAR_IN_FSV_1052'
-                    ],
-                    'fsv20xx': [
-                        'VAR_IN_FSV_2011', 'VAR_IN_FSV_2012', 'VAR_IN_FSV_2021', 'VAR_IN_FSV_2022',
-                        'VAR_IN_FSV_2031', 'VAR_IN_FSV_2032', 'ENUM_IN_FSV_2041', 'VAR_IN_FSV_2051',
-                        'VAR_IN_FSV_2052', 'VAR_IN_FSV_2061', 'VAR_IN_FSV_2062', 'VAR_IN_FSV_2071',
-                        'VAR_IN_FSV_2072', 'ENUM_IN_FSV_2081', 'ENUM_IN_FSV_2091', 'ENUM_IN_FSV_2092',
-                        'ENUM_IN_FSV_2093', 'ENUM_IN_FSV_2094'
-                    ],
-                    'fsv30xx': [
-                        'ENUM_IN_FSV_3011', 'VAR_IN_FSV_3021', 'VAR_IN_FSV_3022', 'VAR_IN_FSV_3023',
-                        'VAR_IN_FSV_3024', 'VAR_IN_FSV_3025', 'VAR_IN_FSV_3026', 'ENUM_IN_FSV_3031',
-                        'VAR_IN_FSV_3032', 'VAR_IN_FSV_3033', 'ENUM_IN_FSV_3041', 'ENUM_IN_FSV_3042',
-                        'VAR_IN_FSV_3043', 'VAR_IN_FSV_3044', 'VAR_IN_FSV_3045', 'VAR_IN_FSV_3046',
-                        'ENUM_IN_FSV_3051', 'VAR_IN_FSV_3052', 'ENUM_IN_FSV_3061', 'ENUM_IN_FSV_3071',
-                        'VAR_IN_FSV_3081', 'VAR_IN_FSV_3082', 'VAR_IN_FSV_3083'
-                    ],
-                    'fsv40xx': [
-                        'ENUM_IN_FSV_4011', 'VAR_IN_FSV_4012', 'VAR_IN_FSV_4013', 'ENUM_IN_FSV_4021',
-                        'ENUM_IN_FSV_4022', 'ENUM_IN_FSV_4023', 'VAR_IN_FSV_4024', 'VAR_IN_FSV_4025',
-                        'ENUM_IN_FSV_4031', 'ENUM_IN_FSV_4032', 'VAR_IN_FSV_4033', 'ENUM_IN_FSV_4041',
-                        'VAR_IN_FSV_4042', 'VAR_IN_FSV_4043', 'ENUM_IN_FSV_4044', 'VAR_IN_FSV_4045',
-                        'VAR_IN_FSV_4046', 'ENUM_IN_FSV_4051', 'VAR_IN_FSV_4052', 'ENUM_IN_FSV_4053',
-                        'ENUM_IN_FSV_4061'
-                    ],
-                    'fsv50xx': [
-                        'VAR_IN_FSV_5011', 'VAR_IN_FSV_5012', 'VAR_IN_FSV_5013', 'VAR_IN_FSV_5014',
-                        'VAR_IN_FSV_5015', 'VAR_IN_FSV_5016', 'VAR_IN_FSV_5017', 'VAR_IN_FSV_5018',
-                        'VAR_IN_FSV_5019', 'VAR_IN_FSV_5021', 'VAR_IN_FSV_5031', 'ENUM_IN_FSV_5022',
-                        'VAR_IN_FSV_5023', 'ENUM_IN_FSV_5041', 'ENUM_IN_FSV_5042', 'ENUM_IN_FSV_5043',
-                        'ENUM_IN_FSV_5051', 'ENUM_IN_FSV_5061', 'ENUM_IN_FSV_5081', 'VAR_IN_FSV_5082',
-                        'VAR_IN_FSV_5083', 'ENUM_IN_FSV_5091', 'VAR_IN_FSV_5092', 'VAR_IN_FSV_5093',
-                        'ENUM_IN_FSV_5094'
-                    ]
+                    'groups': {
+                        'all_sensors': all_sensors
+                    }
                 }
-            }
+                
+                logger.info(f"✅ Polling konfiguriert für {len(all_sensors)} Sensoren")
+                logger.info(f"📋 Sensoren werden alle 60 Sekunden abgefragt")
+            else:
+                logger.warning(f"⚠️ NASA Repository nicht gefunden: {nasa_repo_path}")
 
         # Save generated config to file for compatibility
         with open(self.args.CONFIGFILE, 'w') as f:
@@ -275,12 +244,26 @@ class EHSConfig():
                             except ValueError as e:
                                 raise ConfigException(argument=poller['schedule'], message="schedule value from fetch_interval couldn't be validated, use format 10s, 10m or 10h")
                 
+                # Count total sensors and validate
+                total_sensors = 0
                 for group in self.POLLING['groups']:
+                    valid_sensors = []
                     for ele in self.POLLING['groups'][group]:
-                        if ele not in self.NASA_REPO:
+                        if ele in self.NASA_REPO:
+                            valid_sensors.append(ele)
+                        else:
                             logger.warning(f"Element {ele} from group {group} not found in NASA Repository - skipping")
-                            # Remove the element from the group instead of throwing an error
-                            self.POLLING['groups'][group] = [x for x in self.POLLING['groups'][group] if x != ele]
+                    
+                    self.POLLING['groups'][group] = valid_sensors
+                    total_sensors += len(valid_sensors)
+                
+                logger.info(f"📊 Polling-Validierung abgeschlossen:")
+                logger.info(f"   ✅ {total_sensors} gültige Sensoren gefunden")
+                logger.info(f"   📋 {len(self.NASA_REPO)} Sensoren im NASA Repository verfügbar")
+                
+                if total_sensors < len(self.NASA_REPO):
+                    missing = len(self.NASA_REPO) - total_sensors
+                    logger.warning(f"   ⚠️ {missing} Sensoren werden nicht gepollt")
              
         if 'broker-url' not in self.MQTT:
             raise ConfigException(argument=self.MQTT['broker-url'], message="mqtt broker-url config parameter is missing")
