@@ -9,6 +9,7 @@
 - **Fixed**: MQTTClient platform KeyError Handling
 - **Fixed**: MessageProducer Writer-Initialisierung (NoneType Error)
 - **Fixed**: Umfassende Fehlerbehandlung mit graceful fallbacks
+- **Fixed**: Serielle/TCP Verbindungsbehandlung
 
 ### ✨ Neue Features
 - **Added**: Automatische Versionsnummer mit Build-Timestamp
@@ -16,6 +17,7 @@
 - **Added**: Robuste Fallback-Werte für alle kritischen Pfade
 - **Added**: Verbesserte Logging-Ausgaben mit Fix-Details
 - **Added**: Proper Writer-Management für MessageProducer
+- **Added**: Verbesserte Verbindungsdiagnose
 
 ### 🛡️ Verbesserungen
 - **Enhanced**: Defensive Programmierung in allen kritischen Bereichen
@@ -23,6 +25,7 @@
 - **Enhanced**: Umfassende Try-Catch Blöcke
 - **Enhanced**: Bessere Debugging-Möglichkeiten
 - **Enhanced**: Sichere Initialisierung aller Komponenten
+- **Enhanced**: Verbesserte Fehlerbehandlung bei Verbindungsproblemen
 
 ### 🚨 Sicherheitshinweise
 - ⚠️ Steuerung und Polling erfolgen weiterhin auf eigene Gefahr

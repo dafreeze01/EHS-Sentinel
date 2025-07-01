@@ -60,6 +60,7 @@ class MQTTClient:
     def set_message_producer(self, producer):
         """Set the message producer instance with proper writer"""
         self.message_producer = producer
+        logger.info(f"🔄 MQTT client received MessageProducer: {'✅ Available' if producer else '❌ Not available'}")
 
     async def connect(self):
         logger.info("[MQTT] Connecting to broker...")
@@ -112,7 +113,7 @@ class MQTTClient:
             if self.message_producer is not None:
                 asyncio.create_task(self.message_producer.write_request(parts[2], payload.decode(), read_request_after=True))
             else:
-                logger.warning(f"Cannot process control message - MessageProducer not available")
+                logger.warning(f"⚠️ Cannot process control message - MessageProducer not available")
 
     def on_connect(self, client, flags, rc, properties):
         if rc == 0:
@@ -319,7 +320,7 @@ class MQTTClient:
     def _get_origin(self):
         return {
                 "name": "EHS-Sentinel",
-                "support_url": "https://github.com/echoDaveD/EHS-Sentinel"
+                "support_url": "https://github.com/dafreeze01/EHS-Sentinel"
             }     
 
     def _normalize_name(self, name):

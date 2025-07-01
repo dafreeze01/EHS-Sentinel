@@ -4,6 +4,7 @@ import serial_asyncio
 import traceback
 import json
 import os
+import datetime
 from MessageProcessor import MessageProcessor
 from MessageProducer import MessageProducer
 from EHSArguments import EHSArguments
@@ -12,7 +13,6 @@ from EHSExceptions import MessageWarningException, SkipInvalidPacketException
 from MQTTClient import MQTTClient
 import aiofiles
 import random
-import datetime
 
 # Get the logger
 from CustomLogger import logger
@@ -32,7 +32,8 @@ build_info = {
         "Fixed MQTTClient platform KeyError",
         "Added comprehensive error handling",
         "Added graceful fallback values",
-        "Fixed MessageProducer writer initialization"
+        "Fixed MessageProducer writer initialization",
+        "Fixed serial/TCP connection handling"
     ]
 }
 
@@ -76,7 +77,15 @@ async def main():
     await asyncio.sleep(1)
 
     # we are not in dryrun mode for addon, so we need to read from Serial Port
-    await serial_connection(config, args, mqtt)
+    try:
+        await serial_connection(config, args, mqtt)
+    except Exception as e:
+        logger.error(f"❌ Failed to establish connection: {e}")
+        logger.error(traceback.format_exc())
+        # Keep the process running to maintain MQTT connection
+        while True:
+            await asyncio.sleep(60)
+            logger.warning("⚠️ No active connection. Waiting for restart.")
 
 async def process_buffer(buffer, args, config):
     if buffer:
@@ -95,66 +104,88 @@ async def serial_connection(config, args, mqtt):
     buffer = []
     loop = asyncio.get_running_loop()
 
-    if config.TCP is not None:
-        reader, writer = await asyncio.open_connection(config.TCP['ip'], config.TCP['port'])
-    else:
-        reader, writer = await serial_asyncio.open_serial_connection(
-                        loop=loop, 
-                        url=config.SERIAL['device'], 
-                        baudrate=config.SERIAL['baudrate'], 
-                        parity=serial.PARITY_EVEN,
-                        stopbits=serial.STOPBITS_ONE,
-                        bytesize=serial.EIGHTBITS,
-                        rtscts=True,
-                        timeout=1
-        )
-        
-    await asyncio.gather(
-            serial_read(reader, args, config),
-            serial_write(writer, config, mqtt),
-        )
+    logger.info("🔌 Establishing connection...")
+    
+    try:
+        if config.TCP is not None:
+            logger.info(f"🌐 Connecting via TCP to {config.TCP['ip']}:{config.TCP['port']}...")
+            reader, writer = await asyncio.open_connection(config.TCP['ip'], config.TCP['port'])
+            logger.info(f"✅ TCP connection established")
+        else:
+            logger.info(f"🔌 Opening serial connection to {config.SERIAL['device']} at {config.SERIAL['baudrate']} baud...")
+            reader, writer = await serial_asyncio.open_serial_connection(
+                            loop=loop, 
+                            url=config.SERIAL['device'], 
+                            baudrate=config.SERIAL['baudrate'], 
+                            parity=serial.PARITY_EVEN,
+                            stopbits=serial.STOPBITS_ONE,
+                            bytesize=serial.EIGHTBITS,
+                            rtscts=True,
+                            timeout=1
+            )
+            logger.info(f"✅ Serial connection established")
+            
+        logger.info("🔄 Starting read/write tasks...")
+        await asyncio.gather(
+                serial_read(reader, args, config),
+                serial_write(writer, config, mqtt),
+            )
+    except Exception as e:
+        logger.error(f"❌ Connection failed: {e}")
+        logger.error(traceback.format_exc())
+        raise
 
 async def serial_read(reader: asyncio.StreamReader, args, config):
     prev_byte = 0x00
     packet_started = False
     data = bytearray()
     packet_size = 0
+    
+    logger.info("📥 Starting read loop...")
 
     while True:
-        current_byte = await reader.read(1)  # read bitewise
-        if current_byte:
-            if packet_started:
-                data.extend(current_byte)
-                if len(data) == 3:
-                    packet_size = ((data[1] << 8) | data[2]) + 2
-    
-                if packet_size <= len(data):
-                    if current_byte == b'\x34':
-                        asyncio.create_task(process_buffer(data, args, config))
-                        logger.debug(f"Received int: {data}")
-                        logger.debug(f"Received hex: {[hex(x) for x in data]}")
-                        data = bytearray()
-                        packet_started = False
-                    else:
-                        if config.LOGGING['invalidPacket']:
-                            logger.warning(f"Packet does not end with an x34. Size {packet_size} length {len(data)}")
-                            logger.warning(f"Received hex: {[hex(x) for x in data]}")
-                            logger.warning(f"Received raw: {data}")
-                        else:
-                            logger.debug(f"Packet does not end with an x34. Size {packet_size} length {len(data)}")
+        try:
+            current_byte = await reader.read(1)  # read bitewise
+            if current_byte:
+                if packet_started:
+                    data.extend(current_byte)
+                    if len(data) == 3:
+                        packet_size = ((data[1] << 8) | data[2]) + 2
+        
+                    if packet_size <= len(data):
+                        if current_byte == b'\x34':
+                            asyncio.create_task(process_buffer(data, args, config))
+                            logger.debug(f"Received int: {data}")
                             logger.debug(f"Received hex: {[hex(x) for x in data]}")
-                            logger.debug(f"Received raw: {data}")
-                        
-                        data = bytearray()
-                        packet_started = False
+                            data = bytearray()
+                            packet_started = False
+                        else:
+                            if config.LOGGING['invalidPacket']:
+                                logger.warning(f"Packet does not end with an x34. Size {packet_size} length {len(data)}")
+                                logger.warning(f"Received hex: {[hex(x) for x in data]}")
+                                logger.warning(f"Received raw: {data}")
+                            else:
+                                logger.debug(f"Packet does not end with an x34. Size {packet_size} length {len(data)}")
+                                logger.debug(f"Received hex: {[hex(x) for x in data]}")
+                                logger.debug(f"Received raw: {data}")
+                            
+                            data = bytearray()
+                            packet_started = False
 
-            # identify packet start
-            if current_byte == b'\x00' and prev_byte == b'\x32':
-                packet_started = True
-                data.extend(prev_byte)
-                data.extend(current_byte)
+                # identify packet start
+                if current_byte == b'\x00' and prev_byte == b'\x32':
+                    packet_started = True
+                    data.extend(prev_byte)
+                    data.extend(current_byte)
 
-            prev_byte = current_byte
+                prev_byte = current_byte
+        except asyncio.CancelledError:
+            logger.warning("Read task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in read loop: {e}")
+            logger.error(traceback.format_exc())
+            await asyncio.sleep(5)  # Wait before retrying
 
 async def serial_write(writer:asyncio.StreamWriter, config, mqtt):
     # Create MessageProducer with proper writer
@@ -162,6 +193,8 @@ async def serial_write(writer:asyncio.StreamWriter, config, mqtt):
     
     # Set the producer in MQTT client for control messages
     mqtt.set_message_producer(producer)
+    
+    logger.info("📤 Starting write loop and pollers...")
 
     # Wait 20s before initial polling
     await asyncio.sleep(20)
