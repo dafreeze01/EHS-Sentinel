@@ -1,32 +1,24 @@
-import asyncio
-import serial
-import serial_asyncio
-import traceback
-import json
+# Version mit automatischem Timestamp aus config.yaml
+import yaml
 import os
-import datetime
-from MessageProcessor import MessageProcessor
-from MessageProducer import MessageProducer
-from EHSArguments import EHSArguments
-from EHSConfig import EHSConfig
-from EHSExceptions import MessageWarningException, SkipInvalidPacketException
-from MQTTClient import MQTTClient
-from PollingManager import PollingManager
-from PacketMonitor import PacketMonitor
-import aiofiles
-import random
 
-# Get the logger
-from CustomLogger import logger
-from NASAPacket import NASAPacket, AddressClassEnum, PacketType, DataType
-from NASAMessage import NASAMessage
+def get_version_from_config():
+    """Lädt die Version aus der config.yaml"""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'config.yaml')
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+            return config.get('version', '1.0.0')
+    except Exception as e:
+        logger.warning(f"Konnte Version nicht aus config.yaml laden: {e}")
+        return '1.0.0'
 
-# Version mit automatischem Timestamp
-VERSION_BASE = "1.2.0"
-VERSION_PATCH = "4"
-version = f"{VERSION_BASE}.{VERSION_PATCH}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
+# Lade Version aus config.yaml
+VERSION_BASE = get_version_from_config()
+version = f"{VERSION_BASE}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
+
 build_info = {
-    "version": f"{VERSION_BASE}.{VERSION_PATCH}",
+    "version": VERSION_BASE,
     "build_date": datetime.datetime.now().isoformat(),
     "build_type": "Home Assistant Addon",
     "features": [
@@ -37,7 +29,8 @@ build_info = {
         "Secure arithmetic evaluation (SafeArithmetic)",
         "Comprehensive device count reporting",
         "Dreistufige Polling-Strategie",
-        "Paketqualitätsüberwachung"
+        "Paketqualitätsüberwachung",
+        "Automatische Geräteerstellung für alle Sensoren"
     ]
 }
 

@@ -1,21 +1,52 @@
 #!/bin/bash
 
-# Dieses Script inkrementiert automatisch die Patch-Version in startEHSSentinel.py
+# Dieses Script inkrementiert automatisch die Patch-Version in config.yaml
 
-# Pfad zur Datei
-FILE="ehs-sentinel/src/startEHSSentinel.py"
+# Pfad zur Konfigurationsdatei
+CONFIG_FILE="ehs-sentinel/config.yaml"
 
-# Aktuelle Version extrahieren
-CURRENT_VERSION_LINE=$(grep "VERSION_PATCH =" "$FILE")
-CURRENT_PATCH=$(echo "$CURRENT_VERSION_LINE" | grep -oP 'VERSION_PATCH = "\K[0-9]+')
+# Prüfe ob die Datei existiert
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Fehler: $CONFIG_FILE nicht gefunden!"
+    exit 1
+fi
 
-# Neue Patch-Version berechnen
-NEW_PATCH=$((CURRENT_PATCH + 1))
+# Aktuelle Version aus config.yaml extrahieren
+CURRENT_VERSION_LINE=$(grep "^version:" "$CONFIG_FILE")
+if [ -z "$CURRENT_VERSION_LINE" ]; then
+    echo "Fehler: Keine Version in $CONFIG_FILE gefunden!"
+    exit 1
+fi
+
+# Version extrahieren (Format: version: "1.2.3")
+CURRENT_VERSION=$(echo "$CURRENT_VERSION_LINE" | sed 's/version: *"\([^"]*\)".*/\1/')
+
+# Version in Komponenten aufteilen
+IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+# Prüfe ob alle Komponenten numerisch sind
+if ! [[ "$MAJOR" =~ ^[0-9]+$ ]] || ! [[ "$MINOR" =~ ^[0-9]+$ ]] || ! [[ "$PATCH" =~ ^[0-9]+$ ]]; then
+    echo "Fehler: Ungültiges Versionsformat '$CURRENT_VERSION'. Erwartet: MAJOR.MINOR.PATCH"
+    exit 1
+fi
+
+# Patch-Version inkrementieren
+NEW_PATCH=$((PATCH + 1))
+NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
 
 # Version in der Datei aktualisieren
-sed -i "s/VERSION_PATCH = \"$CURRENT_PATCH\"/VERSION_PATCH = \"$NEW_PATCH\"/" "$FILE"
+sed -i "s/version: \"$CURRENT_VERSION\"/version: \"$NEW_VERSION\"/" "$CONFIG_FILE"
 
-echo "Version aktualisiert: Patch-Version von $CURRENT_PATCH auf $NEW_PATCH erhöht"
+# Prüfe ob die Änderung erfolgreich war
+if grep -q "version: \"$NEW_VERSION\"" "$CONFIG_FILE"; then
+    echo "✅ Version erfolgreich aktualisiert: $CURRENT_VERSION → $NEW_VERSION"
+    echo "📁 Datei: $CONFIG_FILE"
+else
+    echo "❌ Fehler beim Aktualisieren der Version!"
+    exit 1
+fi
 
 # Datei zum Commit hinzufügen
-git add "$FILE"
+git add "$CONFIG_FILE"
+
+echo "🚀 Version $NEW_VERSION bereit für Commit"
