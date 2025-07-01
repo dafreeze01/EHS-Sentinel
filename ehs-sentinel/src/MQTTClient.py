@@ -320,7 +320,7 @@ class MQTTClient:
             pass
 
         entity['platform'] = sensor_type
-        entity['state_topic'] = f"{self.config.MQTT['homeAssistantAutoDiscoverTopic']}/{sensor_type}/{self.DEVICE_ID}_{namenorm.lower()}/state"
+        entity['state_topic'] = f"{self.homeAssistantAutoDiscoverTopic}/{sensor_type}/{self.DEVICE_ID}_{namenorm.lower()}/state"
 
         # Safe payload assignment
         try:

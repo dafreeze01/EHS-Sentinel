@@ -198,11 +198,15 @@ async def serial_read(reader: asyncio.StreamReader, args, config, packet_monitor
                                 logger.debug(f"Received raw: {data}")
                             
                             # Protokolliere ein ungültiges Paket
-                            packet_monitor.log_invalid_packet(
-                                f"Packet does not end with an x34. Size {packet_size} length {len(data)}",
-                                [hex(x) for x in data],
-                                data
-                            )
+                            try:
+                                packet_monitor.log_invalid_packet(
+                                    f"Packet does not end with an x34. Size {packet_size} length {len(data)}",
+                                    [hex(x) for x in data],
+                                    data
+                                )
+                            except Exception as e:
+                                logger.error(f"Error in log_invalid_packet: {e}")
+                                logger.error(traceback.format_exc())
                             
                             data = bytearray()
                             packet_started = False

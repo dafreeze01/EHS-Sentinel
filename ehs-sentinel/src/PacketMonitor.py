@@ -4,7 +4,7 @@ import os
 import time
 import traceback
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Any, Optional
 
 from CustomLogger import logger
 
@@ -23,6 +23,7 @@ class PacketMonitor:
     _stats_file = "/data/packet_stats.json"
     _report_file = "/data/packet_reports.json"
     
+    # Vollständige Initialisierung der Statistik-Struktur
     _stats = {
         "total_packets": 0,
         "valid_packets": 0,
@@ -73,6 +74,9 @@ class PacketMonitor:
         
         # Aktualisiere stündliche Statistiken
         hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
+        if "hourly" not in self._stats:
+            self._stats["hourly"] = {}
+            
         if hour_key not in self._stats["hourly"]:
             self._stats["hourly"][hour_key] = {
                 "total": 0,
@@ -86,6 +90,9 @@ class PacketMonitor:
         
         # Aktualisiere tägliche Statistiken
         day_key = datetime.now().strftime("%Y-%m-%d")
+        if "daily" not in self._stats:
+            self._stats["daily"] = {}
+            
         if day_key not in self._stats["daily"]:
             self._stats["daily"][day_key] = {
                 "total": 0,
@@ -117,6 +124,9 @@ class PacketMonitor:
         
         # Aktualisiere stündliche Statistiken
         hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
+        if "hourly" not in self._stats:
+            self._stats["hourly"] = {}
+            
         if hour_key not in self._stats["hourly"]:
             self._stats["hourly"][hour_key] = {
                 "total": 0,
@@ -130,6 +140,9 @@ class PacketMonitor:
         
         # Aktualisiere tägliche Statistiken
         day_key = datetime.now().strftime("%Y-%m-%d")
+        if "daily" not in self._stats:
+            self._stats["daily"] = {}
+            
         if day_key not in self._stats["daily"]:
             self._stats["daily"][day_key] = {
                 "total": 0,
@@ -155,14 +168,16 @@ class PacketMonitor:
             self._stats["error_rate"] = self._stats["invalid_packets"] / self._stats["total_packets"]
         
         # Stündliche Fehlerraten
-        for hour, data in self._stats["hourly"].items():
-            if data["total"] > 0:
-                data["error_rate"] = data["invalid"] / data["total"]
+        if "hourly" in self._stats:
+            for hour, data in self._stats["hourly"].items():
+                if data["total"] > 0:
+                    data["error_rate"] = data["invalid"] / data["total"]
         
         # Tägliche Fehlerraten
-        for day, data in self._stats["daily"].items():
-            if data["total"] > 0:
-                data["error_rate"] = data["invalid"] / data["total"]
+        if "daily" in self._stats:
+            for day, data in self._stats["daily"].items():
+                if data["total"] > 0:
+                    data["error_rate"] = data["invalid"] / data["total"]
     
     def _load_stats(self):
         """Lädt Paketstatistiken aus der Datei, falls vorhanden."""
@@ -232,6 +247,9 @@ class PacketMonitor:
                 hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
                 
                 # Hole die Daten für die aktuelle Stunde
+                if "hourly" not in self._stats:
+                    self._stats["hourly"] = {}
+                    
                 hour_data = self._stats["hourly"].get(hour_key, {
                     "total": 0,
                     "valid": 0,
@@ -293,6 +311,9 @@ class PacketMonitor:
                 day_key = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
                 
                 # Hole die Daten für den vorherigen Tag
+                if "daily" not in self._stats:
+                    self._stats["daily"] = {}
+                    
                 day_data = self._stats["daily"].get(day_key, {
                     "total": 0,
                     "valid": 0,
@@ -328,10 +349,6 @@ class PacketMonitor:
                     
                     if day_data["error_rate"] > self._error_threshold:
                         logger.warning(f"⚠️ Fehlerrate von {day_data['error_rate']:.1%} überschreitet den Schwellwert!")
-                        logger.warning("⚠️ Empfehlungen zur Fehlerbehebung:")
-                        logger.warning("   1. Prüfen Sie die physische Verbindung (Kabel, Stecker)")
-                        logger.warning("   2. Testen Sie alternative WLAN-Kanäle bei Funkstörungen")
-                        logger.warning("   3. Validieren Sie die Modbus-Einstellungen (Baudrate, Parität)")
                 
                 # Warte bis zum nächsten Tag
                 await asyncio.sleep(86400)
@@ -374,19 +391,20 @@ class PacketMonitor:
                 }
                 
                 # Sammle die täglichen Daten der letzten Woche
-                for i in range(7):
-                    day_key = (datetime.now() - timedelta(days=i+1)).strftime("%Y-%m-%d")
-                    day_data = self._stats["daily"].get(day_key, {
-                        "total": 0,
-                        "valid": 0,
-                        "invalid": 0,
-                        "error_rate": 0.0
-                    })
-                    
-                    week_data["total"] += day_data["total"]
-                    week_data["valid"] += day_data["valid"]
-                    week_data["invalid"] += day_data["invalid"]
-                    week_data["days"][day_key] = day_data
+                if "daily" in self._stats:
+                    for i in range(7):
+                        day_key = (datetime.now() - timedelta(days=i+1)).strftime("%Y-%m-%d")
+                        day_data = self._stats["daily"].get(day_key, {
+                            "total": 0,
+                            "valid": 0,
+                            "invalid": 0,
+                            "error_rate": 0.0
+                        })
+                        
+                        week_data["total"] += day_data["total"]
+                        week_data["valid"] += day_data["valid"]
+                        week_data["invalid"] += day_data["invalid"]
+                        week_data["days"][day_key] = day_data
                 
                 # Berechne die wöchentliche Fehlerrate
                 if week_data["total"] > 0:
