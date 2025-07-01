@@ -1,0 +1,8 @@
+repos:
+-   repo: local
+    hooks:
+    -   id: increment-version
+        name: Increment Version
+        entry: .pre-commit-hooks/increment-version.sh
+        language: script
+        pass_filenames: false
