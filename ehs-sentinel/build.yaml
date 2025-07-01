@@ -4,4 +4,13 @@ build_from:
   armhf: "ghcr.io/home-assistant/armhf-base-python:3.11-alpine3.18"
   armv7: "ghcr.io/home-assistant/armv7-base-python:3.11-alpine3.18"
   i386: "ghcr.io/home-assistant/i386-base-python:3.11-alpine3.18"
-args: {}
+args:
+  BUILD_ARCH: "{arch}"
+  BUILD_VERSION: "1.0.0"
+labels:
+  io.hass.name: "EHS-Sentinel"
+  io.hass.description: "Samsung EHS Wärmepumpen Integration"
+  io.hass.arch: "{arch}"
+  io.hass.type: "addon"
+  io.hass.version: "1.0.0"
+  maintainer: "dafreeze01"

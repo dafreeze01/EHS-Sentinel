@@ -11,6 +11,7 @@ arch:
   - i386
 startup: application
 boot: auto
+
 # Standardwerte für die Konfiguration
 options:
   # Verbindungseinstellungen
@@ -92,5 +93,5 @@ devices:
 services:
   - mqtt:need
 
-# Docker Image (wird später erstellt)
-image: "ghcr.io/dafreeze01/ehs-sentinel-addon"
+# URL zum Repository
+url: "https://github.com/dafreeze01/EHS-Sentinel"
