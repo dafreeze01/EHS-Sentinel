@@ -1,10 +1,10 @@
 import asyncio
-import time
-import datetime
-from typing import Dict, List, Any, Optional
-from collections import defaultdict
 import json
 import os
+import time
+import traceback
+from datetime import datetime
+from typing import Dict, List, Optional
 
 from CustomLogger import logger
 from EHSConfig import EHSConfig
@@ -12,285 +12,239 @@ from MessageProducer import MessageProducer
 
 class PollingManager:
     """
-    Verwaltet die dreistufige Polling-Strategie und überwacht die Paketqualität.
+    Verwaltet die dreistufige Polling-Strategie für EHS-Sentinel.
     
-    Implementiert drei Polling-Ebenen:
-    - live_data: Kritische Betriebsdaten (10-15 Sekunden)
-    - fsv_settings: Veränderliche Einstellungen (5-10 Minuten)
-    - static_data: Statische Informationen (stündlich)
-    
-    Überwacht zusätzlich die Paketqualität und erstellt Statistiken.
+    Stufen:
+    1. live_data: Kritische Betriebsdaten alle 10-15 Sekunden
+    2. fsv_settings: Veränderliche Einstellungen alle 5-10 Minuten
+    3. static_data: Statische Informationen maximal stündlich
     """
     
-    def __init__(self, producer: Optional[MessageProducer] = None):
-        """Initialisiert den PollingManager mit optionalem MessageProducer."""
-        self.config = EHSConfig()
-        self.producer = producer
-        self.stats_file = "/data/packet_stats.json"
+    _instance = None
+    _initialized = False
+    _producer = None
+    _config = None
+    _polling_groups = {}
+    _polling_tasks = {}
+    _stats_file = "/data/polling_stats.json"
+    _stats = {
+        "last_run": {},
+        "success_count": {},
+        "error_count": {},
+        "total_polls": 0
+    }
+    
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(PollingManager, cls).__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return
+            
+        self._initialized = True
+        self._config = EHSConfig()
         
-        # Statistik-Tracking
-        self.total_packets = 0
-        self.invalid_packets = 0
-        self.hourly_stats = defaultdict(lambda: {"total": 0, "invalid": 0})
-        self.last_stats_save = time.time()
-        
-        # Lade vorhandene Statistiken
+        # Lade vorhandene Statistiken, falls vorhanden
         self._load_stats()
         
-        # Definiere Sensor-Gruppen für dreistufiges Polling
-        self.polling_groups = {
-            "live_data": [
-                # Kritische Betriebsdaten (Temperaturen, Frequenzen, Status)
-                "NASA_POWER", "NASA_INDOOR_OPMODE", "NASA_OUTDOOR_OPERATION_STATUS",
-                "NASA_OUTDOOR_TW1_TEMP", "NASA_OUTDOOR_TW2_TEMP", "NASA_OUTDOOR_OUT_TEMP",
-                "NASA_INDOOR_DHW_CURRENT_TEMP", "NASA_OUTDOOR_COMP1_RUN_HZ",
-                "NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT", "VAR_IN_FLOW_SENSOR_CALC",
-                "NASA_EHSSENTINEL_HEAT_OUTPUT", "NASA_EHSSENTINEL_COP",
-                "DHW_POWER", "CONTROL_SILENCE", "NASA_OUTDOOR_DEFROST_STEP"
-            ],
-            "fsv_settings": [
-                # Veränderliche Einstellungen (FSV-Parameter)
-                "VAR_IN_TEMP_WATER_LAW_TARGET_F",
-                # FSV10xx - Fernbedienung
+        # Definiere die Polling-Gruppen
+        self._define_polling_groups()
+        
+    def _load_stats(self):
+        """Lädt Polling-Statistiken aus der Datei, falls vorhanden."""
+        try:
+            if os.path.exists(self._stats_file):
+                with open(self._stats_file, 'r') as f:
+                    self._stats = json.load(f)
+                logger.debug(f"Polling-Statistiken geladen: {self._stats}")
+            else:
+                logger.info("📊 Keine vorhandenen Polling-Statistiken gefunden, starte neue Aufzeichnung")
+        except Exception as e:
+            logger.warning(f"Fehler beim Laden der Polling-Statistiken: {e}")
+    
+    def _save_stats(self):
+        """Speichert Polling-Statistiken in eine Datei."""
+        try:
+            with open(self._stats_file, 'w') as f:
+                json.dump(self._stats, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Fehler beim Speichern der Polling-Statistiken: {e}")
+    
+    def _define_polling_groups(self):
+        """Definiert die drei Polling-Gruppen mit ihren Sensoren."""
+        # Gruppe 1: Kritische Betriebsdaten (alle 15 Sekunden)
+        self._polling_groups["live_data"] = {
+            "interval": 15,  # Sekunden
+            "sensors": [
+                "NASA_POWER",                          # Ein/Aus Status
+                "NASA_INDOOR_OPMODE",                  # Betriebsmodus
+                "NASA_OUTDOOR_OPERATION_STATUS",       # Betriebsstatus
+                "NASA_OUTDOOR_TW1_TEMP",               # Rücklauftemperatur
+                "NASA_OUTDOOR_TW2_TEMP",               # Vorlauftemperatur
+                "NASA_OUTDOOR_OUT_TEMP",               # Außentemperatur
+                "NASA_INDOOR_DHW_CURRENT_TEMP",        # Warmwassertemperatur
+                "NASA_OUTDOOR_COMP1_RUN_HZ",           # Kompressor Istfrequenz
+                "NASA_OUTDOOR_COMP1_TARGET_HZ",        # Kompressor Zielfrequenz
+                "NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT", # Aktuelle Leistungsaufnahme
+                "VAR_IN_FLOW_SENSOR_CALC",             # Wasserdurchfluss
+                "NASA_EHSSENTINEL_HEAT_OUTPUT",        # Berechnete Heizleistung
+                "NASA_EHSSENTINEL_COP",                # Berechneter COP
+                "CONTROL_SILENCE",                     # Leiser Modus
+                "DHW_POWER"                            # Warmwasser Ein/Aus
+            ]
+        }
+        
+        # Gruppe 2: Veränderliche Einstellungen (alle 5 Minuten)
+        self._polling_groups["fsv_settings"] = {
+            "interval": 300,  # Sekunden (5 Minuten)
+            "sensors": [
+                # FSV 10xx - Fernbedienung
                 "VAR_IN_FSV_1011", "VAR_IN_FSV_1012", "VAR_IN_FSV_1021", "VAR_IN_FSV_1022",
                 "VAR_IN_FSV_1031", "VAR_IN_FSV_1032", "VAR_IN_FSV_1041", "VAR_IN_FSV_1042",
                 "VAR_IN_FSV_1051", "VAR_IN_FSV_1052",
-                # FSV20xx - Wassergesetz
+                
+                # FSV 20xx - Wassergesetz
                 "VAR_IN_FSV_2011", "VAR_IN_FSV_2012", "VAR_IN_FSV_2021", "VAR_IN_FSV_2022",
                 "VAR_IN_FSV_2031", "VAR_IN_FSV_2032", "ENUM_IN_FSV_2041", "VAR_IN_FSV_2051",
                 "VAR_IN_FSV_2052", "VAR_IN_FSV_2061", "VAR_IN_FSV_2062", "VAR_IN_FSV_2071",
                 "VAR_IN_FSV_2072", "ENUM_IN_FSV_2081", "ENUM_IN_FSV_2091", "ENUM_IN_FSV_2092",
-                # FSV30xx - Warmwasser
+                
+                # FSV 30xx - Warmwasser
                 "ENUM_IN_FSV_3011", "VAR_IN_FSV_3021", "VAR_IN_FSV_3022", "VAR_IN_FSV_3023",
-                "ENUM_IN_FSV_3041", "ENUM_IN_FSV_3042", "VAR_IN_FSV_3043", "VAR_IN_FSV_3044",
-                # FSV40xx - Heizung
+                
+                # FSV 40xx - Heizung
                 "ENUM_IN_FSV_4011", "VAR_IN_FSV_4012", "VAR_IN_FSV_4013", "ENUM_IN_FSV_4021",
-                "ENUM_IN_FSV_4022", "ENUM_IN_FSV_4023", "VAR_IN_FSV_4024", "VAR_IN_FSV_4025",
-                # FSV50xx - Sonstige
-                "ENUM_IN_FSV_5041", "ENUM_IN_FSV_5081", "ENUM_IN_FSV_5091", "ENUM_IN_FSV_5094"
-            ],
-            "static_data": [
-                # Statische Informationen (Gerätedaten, Grenzwerte)
-                "STR_OUTDOOR_MODEL_NAME", "STR_INDOOR_MODEL_NAME", "STR_SOFTWARE_VERSION",
-                "STR_FIRMWARE_VERSION", "STR_SERIAL_NUMBER", "STR_MANUFACTURE_DATE",
-                "STR_INSTALLATION_DATE", "LVAR_IN_MINUTES_SINCE_INSTALLATION",
-                "LVAR_IN_MINUTES_ACTIVE", "LVAR_IN_TOTAL_GENERATED_POWER",
-                "NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT_ACCUM", "LVAR_IN_DHW_OPERATION_TIME"
+                "ENUM_IN_FSV_4022", "ENUM_IN_FSV_4023", "VAR_IN_FSV_4024", "ENUM_IN_FSV_4031",
+                "VAR_IN_FSV_4043", "VAR_IN_FSV_4046", "ENUM_IN_FSV_4051",
+                
+                # FSV 50xx - Sonstiges
+                "VAR_IN_FSV_5011", "VAR_IN_FSV_5012", "VAR_IN_FSV_5013", "VAR_IN_FSV_5014",
+                "ENUM_IN_FSV_5022", "ENUM_IN_FSV_5041", "ENUM_IN_FSV_5051", "ENUM_IN_FSV_5061"
             ]
         }
         
-        # Intervalle in Sekunden
-        self.polling_intervals = {
-            "live_data": 15,      # 15 Sekunden
-            "fsv_settings": 300,  # 5 Minuten
-            "static_data": 3600   # 1 Stunde
+        # Gruppe 3: Statische Informationen (stündlich)
+        self._polling_groups["static_data"] = {
+            "interval": 3600,  # Sekunden (1 Stunde)
+            "sensors": [
+                "STR_INDOOR_MODEL_NAME",               # Inneneinheit Modellname
+                "STR_OUTDOOR_MODEL_NAME",              # Außeneinheit Modellname
+                "STR_SERIAL_NUMBER",                   # Seriennummer
+                "STR_MANUFACTURE_DATE",                # Herstellungsdatum
+                "STR_INSTALLATION_DATE",               # Installationsdatum
+                "STR_SOFTWARE_VERSION",                # Software Version
+                "STR_FIRMWARE_VERSION",                # Firmware Version
+                "LVAR_IN_MINUTES_SINCE_INSTALLATION",  # Minuten seit Installation
+                "LVAR_IN_MINUTES_ACTIVE",              # Aktive Minuten
+                "LVAR_IN_TOTAL_GENERATED_POWER",       # Gesamt erzeugte Energie
+                "NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT_ACCUM", # Gesamte verbrauchte Energie
+                "LVAR_IN_DHW_OPERATION_TIME"           # Warmwasser Betriebszeit
+            ]
         }
-        
-        # Validiere Sensor-Gruppen gegen NASA Repository
-        self._validate_polling_groups()
     
-    def _validate_polling_groups(self):
-        """Validiert die Sensor-Gruppen gegen das NASA Repository."""
-        if not hasattr(self.config, 'NASA_REPO'):
-            logger.warning("⚠️ NASA Repository nicht verfügbar für Polling-Validierung")
-            return
-            
-        for group_name, sensors in self.polling_groups.items():
-            valid_sensors = []
-            for sensor in sensors:
-                if sensor in self.config.NASA_REPO:
-                    valid_sensors.append(sensor)
-                else:
-                    logger.warning(f"⚠️ Sensor {sensor} aus Gruppe {group_name} nicht im NASA Repository - wird übersprungen")
-            
-            # Aktualisiere die Gruppe mit nur gültigen Sensoren
-            self.polling_groups[group_name] = valid_sensors
-            
-            logger.info(f"✅ Polling-Gruppe '{group_name}' validiert: {len(valid_sensors)} gültige Sensoren")
-    
-    def set_producer(self, producer: MessageProducer):
+    def set_message_producer(self, producer: MessageProducer):
         """Setzt den MessageProducer für das Polling."""
-        self.producer = producer
+        self._producer = producer
         logger.info(f"🔄 PollingManager hat MessageProducer erhalten: {'✅ Verfügbar' if producer else '❌ Nicht verfügbar'}")
     
-    async def start_polling(self):
-        """Startet das dreistufige Polling."""
-        if not self.producer:
-            logger.error("❌ Polling kann nicht gestartet werden - kein MessageProducer verfügbar")
-            return
+    def validate_polling_groups(self) -> bool:
+        """Validiert alle Polling-Gruppen gegen das NASA Repository."""
+        valid = True
+        
+        for group_name, group_data in self._polling_groups.items():
+            valid_sensors = []
+            for sensor in group_data["sensors"]:
+                if sensor in self._config.NASA_REPO:
+                    valid_sensors.append(sensor)
+                else:
+                    logger.warning(f"⚠️ Sensor {sensor} in Gruppe {group_name} nicht im NASA Repository gefunden")
             
+            # Aktualisiere die Liste der gültigen Sensoren
+            self._polling_groups[group_name]["sensors"] = valid_sensors
+            logger.info(f"✅ Polling-Gruppe '{group_name}' validiert: {len(valid_sensors)} gültige Sensoren")
+        
+        return valid
+    
+    async def start_polling(self):
+        """Startet das dreistufige Polling-System."""
+        if not self._producer:
+            logger.error("❌ Kann Polling nicht starten - kein MessageProducer verfügbar")
+            return
+        
+        # Validiere die Polling-Gruppen
+        self.validate_polling_groups()
+        
         logger.info("🚀 Starte dreistufiges Polling-System...")
         
-        # Starte die drei Polling-Tasks mit unterschiedlichen Intervallen
-        await asyncio.gather(
-            self._poll_group("live_data"),
-            self._poll_group("fsv_settings"),
-            self._poll_group("static_data")
-        )
+        # Starte die Polling-Tasks für jede Gruppe
+        for group_name, group_data in self._polling_groups.items():
+            interval = group_data["interval"]
+            sensors = group_data["sensors"]
+            
+            if not sensors:
+                logger.warning(f"⚠️ Keine gültigen Sensoren in Gruppe {group_name} - überspringe")
+                continue
+            
+            logger.info(f"🔄 Starte Polling für Gruppe '{group_name}' alle {interval} Sekunden ({len(sensors)} Sensoren)")
+            
+            # Starte den Polling-Task mit zufälliger Verzögerung (0-5 Sekunden)
+            # um die Last zu verteilen
+            delay = 0.1 * len(self._polling_tasks)
+            self._polling_tasks[group_name] = asyncio.create_task(
+                self._poll_group(group_name, sensors, interval, delay)
+            )
     
-    async def _poll_group(self, group_name: str):
-        """Führt das Polling für eine bestimmte Gruppe durch."""
-        interval = self.polling_intervals[group_name]
-        sensors = self.polling_groups[group_name]
-        
-        logger.info(f"🔄 Starte Polling für Gruppe '{group_name}' alle {interval} Sekunden ({len(sensors)} Sensoren)")
-        
-        # Warte kurz, um die Starts zu staffeln
-        await asyncio.sleep(5 * list(self.polling_groups.keys()).index(group_name))
+    async def _poll_group(self, group_name: str, sensors: List[str], interval: int, initial_delay: float = 0):
+        """Führt das Polling für eine Gruppe in regelmäßigen Abständen durch."""
+        # Initiale Verzögerung
+        if initial_delay > 0:
+            await asyncio.sleep(initial_delay)
         
         while True:
             try:
                 start_time = time.time()
                 
                 # Führe das Polling durch
-                if sensors:
-                    logger.debug(f"📊 Polling von {len(sensors)} Sensoren aus Gruppe '{group_name}'")
-                    await self.producer.read_request(sensors)
-                    logger.info(f"✅ Polling für Gruppe '{group_name}' abgeschlossen ({len(sensors)} Sensoren)")
+                await self._producer.read_request(sensors)
                 
-                # Berechne die tatsächliche Ausführungszeit
-                execution_time = time.time() - start_time
+                # Aktualisiere Statistiken
+                self._stats["total_polls"] += 1
+                self._stats["last_run"][group_name] = datetime.now().isoformat()
                 
-                # Warte bis zum nächsten Intervall, berücksichtige die Ausführungszeit
-                wait_time = max(0.1, interval - execution_time)
-                await asyncio.sleep(wait_time)
+                if group_name not in self._stats["success_count"]:
+                    self._stats["success_count"][group_name] = 0
+                self._stats["success_count"][group_name] += 1
+                
+                # Speichere Statistiken alle 10 erfolgreichen Polls
+                if self._stats["total_polls"] % 10 == 0:
+                    self._save_stats()
+                
+                logger.info(f"✅ Polling für Gruppe '{group_name}' abgeschlossen ({len(sensors)} Sensoren)")
+                
+                # Berechne die verbleibende Zeit bis zum nächsten Polling
+                elapsed = time.time() - start_time
+                sleep_time = max(0.1, interval - elapsed)
+                
+                await asyncio.sleep(sleep_time)
                 
             except Exception as e:
-                logger.error(f"❌ Fehler beim Polling der Gruppe '{group_name}': {e}")
-                await asyncio.sleep(interval)  # Warte trotzdem bis zum nächsten Intervall
-    
-    def record_packet(self, is_valid: bool):
-        """
-        Zeichnet ein empfangenes Paket auf und aktualisiert die Statistiken.
-        
-        Args:
-            is_valid: True wenn das Paket gültig ist, False wenn ungültig
-        """
-        self.total_packets += 1
-        if not is_valid:
-            self.invalid_packets += 1
-        
-        # Aktualisiere stündliche Statistiken
-        hour_key = datetime.datetime.now().strftime("%Y-%m-%d %H:00")
-        self.hourly_stats[hour_key]["total"] += 1
-        if not is_valid:
-            self.hourly_stats[hour_key]["invalid"] += 1
-        
-        # Speichere Statistiken alle 5 Minuten
-        if time.time() - self.last_stats_save > 300:  # 5 Minuten
-            self._save_stats()
-            self.last_stats_save = time.time()
-            
-            # Prüfe auf Übertragungsprobleme
-            self._check_transmission_quality()
-    
-    def _check_transmission_quality(self):
-        """Prüft die Übertragungsqualität und gibt Warnungen aus."""
-        if self.total_packets == 0:
-            return
-            
-        error_rate = (self.invalid_packets / self.total_packets) * 100
-        
-        if error_rate > 5:
-            logger.warning(f"⚠️ WARNUNG: Hohe Paketfehlerrate von {error_rate:.2f}% ({self.invalid_packets}/{self.total_packets})")
-            logger.warning("⚠️ Empfehlungen zur Fehlerbehebung:")
-            logger.warning("   1. Prüfen Sie die physische Verbindung (Kabel, Stecker)")
-            logger.warning("   2. Testen Sie alternative WLAN-Kanäle bei Funkstörungen")
-            logger.warning("   3. Validieren Sie die Modbus-Einstellungen (Baudrate, Parität)")
-        else:
-            logger.info(f"✅ Paketqualität: {100-error_rate:.2f}% fehlerfrei ({self.total_packets-self.invalid_packets}/{self.total_packets})")
-    
-    def _save_stats(self):
-        """Speichert die Paketstatistiken in eine JSON-Datei."""
-        try:
-            stats = {
-                "total_packets": self.total_packets,
-                "invalid_packets": self.invalid_packets,
-                "error_rate_percent": (self.invalid_packets / self.total_packets * 100) if self.total_packets > 0 else 0,
-                "hourly_stats": dict(self.hourly_stats),
-                "last_updated": datetime.datetime.now().isoformat()
-            }
-            
-            with open(self.stats_file, 'w') as f:
-                json.dump(stats, f, indent=2)
+                # Fehlerbehandlung
+                if group_name not in self._stats["error_count"]:
+                    self._stats["error_count"][group_name] = 0
+                self._stats["error_count"][group_name] += 1
                 
-            logger.debug(f"📊 Paketstatistiken gespeichert: {self.stats_file}")
-        except Exception as e:
-            logger.error(f"❌ Fehler beim Speichern der Paketstatistiken: {e}")
-    
-    def _load_stats(self):
-        """Lädt vorhandene Paketstatistiken aus der JSON-Datei."""
-        if not os.path.exists(self.stats_file):
-            logger.info(f"📊 Keine vorhandenen Paketstatistiken gefunden, starte neue Aufzeichnung")
-            return
-            
-        try:
-            with open(self.stats_file, 'r') as f:
-                stats = json.load(f)
+                logger.error(f"❌ Fehler beim Polling für Gruppe '{group_name}': {e}")
+                logger.error(traceback.format_exc())
                 
-            self.total_packets = stats.get("total_packets", 0)
-            self.invalid_packets = stats.get("invalid_packets", 0)
-            
-            # Konvertiere hourly_stats zurück zu defaultdict
-            for hour, data in stats.get("hourly_stats", {}).items():
-                self.hourly_stats[hour] = data
-                
-            logger.info(f"📊 Paketstatistiken geladen: {self.total_packets} gesamt, {self.invalid_packets} ungültig")
-        except Exception as e:
-            logger.error(f"❌ Fehler beim Laden der Paketstatistiken: {e}")
+                # Bei Fehlern kurz warten und dann fortsetzen
+                await asyncio.sleep(5)
     
-    def generate_report(self) -> str:
-        """
-        Generiert einen Bericht über die Paketqualität.
-        
-        Returns:
-            Formatierter Bericht als String
-        """
-        if self.total_packets == 0:
-            return "Keine Paketdaten verfügbar für Bericht."
-            
-        error_rate = (self.invalid_packets / self.total_packets) * 100
-        
-        report = [
-            "📊 EHS-Sentinel Paketqualitäts-Bericht",
-            "=" * 50,
-            f"Zeitraum: {list(self.hourly_stats.keys())[0] if self.hourly_stats else 'N/A'} bis {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            f"Gesamtpakete: {self.total_packets}",
-            f"Ungültige Pakete: {self.invalid_packets}",
-            f"Fehlerrate: {error_rate:.2f}%",
-            "",
-            "Stündliche Statistik:",
-            "-" * 50
-        ]
-        
-        # Sortiere nach Stunde
-        sorted_hours = sorted(self.hourly_stats.keys())
-        
-        for hour in sorted_hours:
-            stats = self.hourly_stats[hour]
-            total = stats["total"]
-            invalid = stats["invalid"]
-            hourly_error_rate = (invalid / total * 100) if total > 0 else 0
-            
-            status = "✅ Gut" if hourly_error_rate <= 5 else "⚠️ Problematisch"
-            
-            report.append(f"{hour}: {total} Pakete, {invalid} ungültig ({hourly_error_rate:.2f}%) - {status}")
-        
-        report.extend([
-            "",
-            "Empfehlungen:",
-            "-" * 50
-        ])
-        
-        if error_rate > 5:
-            report.extend([
-                "⚠️ Die Paketfehlerrate ist zu hoch (>5%). Bitte überprüfen Sie:",
-                "1. Physische Verbindung (Kabel, Stecker, Adapter)",
-                "2. WLAN-Kanal bei Funkstörungen",
-                "3. Modbus-Einstellungen (Baudrate, Parität)",
-                "4. Elektromagnetische Störquellen in der Nähe"
-            ])
-        else:
-            report.append("✅ Die Verbindungsqualität ist gut. Keine Maßnahmen erforderlich.")
-        
-        return "\n".join(report)
+    def get_polling_stats(self) -> Dict:
+        """Gibt die aktuellen Polling-Statistiken zurück."""
+        return self._stats
+    
+    def get_polling_groups(self) -> Dict:
+        """Gibt die konfigurierten Polling-Gruppen zurück."""
+        return self._polling_groups

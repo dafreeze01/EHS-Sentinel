@@ -4,14 +4,13 @@ import yaml
 import os
 import re
 import json
-import logging
 
 from CustomLogger import logger
 
 class EHSConfig():
     """
     Singleton class to handle the configuration for the EHS Sentinel application.
-    Modified for Home Assistant Addon support with comprehensive sensor polling.
+    Modified for Home Assistant Addon support.
     """
 
     _instance = None
@@ -54,6 +53,10 @@ class EHSConfig():
         """Generate configuration from Home Assistant Addon options"""
         addon_config = self.args.ADDON_CONFIG
         
+        # Setze Log-Level
+        log_level = "INFO"
+        logger.info(f"Log level set to: {log_level}")
+        
         config = {
             'general': {
                 'nasaRepositoryFile': '/app/data/NasaRepository.yml',
@@ -91,10 +94,6 @@ class EHSConfig():
         if protocol_file:
             config['general']['protocolFile'] = protocol_file
 
-        # Set log level
-        log_level = addon_config.get('log_level', 'INFO')
-        self._set_log_level(log_level)
-
         # Connection configuration
         connection_type = addon_config.get('verbindung_typ', 'tcp')
         if connection_type == 'tcp':
@@ -108,53 +107,38 @@ class EHSConfig():
                 'baudrate': addon_config.get('serial_baudrate', 9600)
             }
 
-        # Enhanced Polling configuration - Poll ALL available sensors
-        if addon_config.get('polling_aktiviert', False):
-            # Load NASA Repository first to get all available sensors
-            nasa_repo_path = '/app/data/NasaRepository.yml'
-            if os.path.isfile(nasa_repo_path):
-                with open(nasa_repo_path, mode='r') as file:
-                    nasa_repo = yaml.safe_load(file)
-                
-                # Get all sensor names from NASA Repository
-                all_sensors = list(nasa_repo.keys())
-                
-                logger.info(f"📊 Gefunden: {len(all_sensors)} Sensoren in NASA Repository")
-                logger.info(f"🔄 Konfiguriere Polling für ALLE verfügbaren Sensoren...")
-                
-                # Create a single group with ALL sensors
-                config['polling'] = {
-                    'fetch_interval': [
-                        {'name': 'all_sensors', 'enable': True, 'schedule': 60}  # Poll all sensors every 60 seconds
-                    ],
-                    'groups': {
-                        'all_sensors': all_sensors
-                    }
-                }
-                
-                logger.info(f"✅ Polling konfiguriert für {len(all_sensors)} Sensoren")
-                logger.info(f"📋 Sensoren werden alle 60 Sekunden abgefragt")
-            else:
-                logger.warning(f"⚠️ NASA Repository nicht gefunden: {nasa_repo_path}")
+        # Polling configuration - immer aktivieren mit allen Sensoren
+        # Lade das NASA Repository, um alle verfügbaren Sensoren zu ermitteln
+        with open('/app/data/NasaRepository.yml', mode='r') as file:
+            nasa_repo = yaml.safe_load(file)
+        
+        # Zähle die Sensoren
+        sensor_count = len(nasa_repo)
+        logger.info(f"📊 Gefunden: {sensor_count} Sensoren in NASA Repository")
+        
+        # Erstelle eine Liste aller Sensoren
+        all_sensors = list(nasa_repo.keys())
+        
+        logger.info(f"🔄 Konfiguriere Polling für ALLE verfügbaren Sensoren...")
+        
+        # Konfiguriere das Polling mit allen Sensoren
+        config['polling'] = {
+            'fetch_interval': [
+                {'name': 'all_sensors', 'enable': True, 'schedule': '60s'}
+            ],
+            'groups': {
+                'all_sensors': all_sensors
+            }
+        }
+        
+        logger.info(f"✅ Polling konfiguriert für {len(all_sensors)} Sensoren")
+        logger.info(f"📋 Sensoren werden alle 60 Sekunden abgefragt")
 
         # Save generated config to file for compatibility
         with open(self.args.CONFIGFILE, 'w') as f:
             yaml.dump(config, f, default_flow_style=False)
 
         self._load_config(config)
-
-    def _set_log_level(self, level: str):
-        """Set the logging level for the application"""
-        level_map = {
-            'DEBUG': logging.DEBUG,
-            'INFO': logging.INFO,
-            'WARNING': logging.WARNING,
-            'ERROR': logging.ERROR
-        }
-        
-        if level in level_map:
-            logger.setLevel(level_map[level])
-            logger.info(f"Log level set to: {level}")
 
     def _load_config(self, config):
         """Load configuration from config dict"""
@@ -196,6 +180,7 @@ class EHSConfig():
         if os.path.isfile(self.GENERAL['nasaRepositoryFile']):
              with open(self.GENERAL['nasaRepositoryFile'], mode='r') as file:
                 self.NASA_REPO = yaml.safe_load(file)
+                logger.info(f"📊 Gefunden: {len(self.NASA_REPO)} Sensoren im NASA Repository")
         else:
             raise ConfigException(argument=self.GENERAL['nasaRepositoryFile'], message="NASA Repository File is missing")
 
@@ -237,33 +222,30 @@ class EHSConfig():
                     if poller['name'] not in self.POLLING['groups']:
                         raise ConfigException(argument=poller['name'], message="Groupname from fetch_interval not defined in groups: ")
                     if 'schedule' in poller:
-                        # Schedule is already in seconds from addon config
-                        if isinstance(poller['schedule'], str):
-                            try:
-                                poller['schedule'] = self.parse_time_string(poller['schedule'])
-                            except ValueError as e:
-                                raise ConfigException(argument=poller['schedule'], message="schedule value from fetch_interval couldn't be validated, use format 10s, 10m or 10h")
+                        try:
+                            poller['schedule'] = self.parse_time_string(poller['schedule'])
+                        except ValueError as e:
+                            raise ConfigException(argument=poller['schedule'], message="schedule value from fetch_interval couldn't be validated, use format 10s, 10m or 10h")
                 
-                # Count total sensors and validate
-                total_sensors = 0
+                # Validiere alle Sensoren in allen Gruppen
+                valid_sensors = 0
+                total_sensors = len(self.NASA_REPO)
+                
                 for group in self.POLLING['groups']:
-                    valid_sensors = []
+                    valid_group_sensors = []
                     for ele in self.POLLING['groups'][group]:
                         if ele in self.NASA_REPO:
-                            valid_sensors.append(ele)
+                            valid_group_sensors.append(ele)
+                            valid_sensors += 1
                         else:
-                            logger.warning(f"Element {ele} from group {group} not found in NASA Repository - skipping")
+                            logger.warning(f"⚠️ Element {ele} aus Gruppe {group} nicht im NASA Repository gefunden - wird übersprungen")
                     
-                    self.POLLING['groups'][group] = valid_sensors
-                    total_sensors += len(valid_sensors)
+                    # Aktualisiere die Gruppe mit nur gültigen Sensoren
+                    self.POLLING['groups'][group] = valid_group_sensors
                 
-                logger.info(f"📊 Polling-Validierung abgeschlossen:")
-                logger.info(f"   ✅ {total_sensors} gültige Sensoren gefunden")
-                logger.info(f"   📋 {len(self.NASA_REPO)} Sensoren im NASA Repository verfügbar")
-                
-                if total_sensors < len(self.NASA_REPO):
-                    missing = len(self.NASA_REPO) - total_sensors
-                    logger.warning(f"   ⚠️ {missing} Sensoren werden nicht gepollt")
+                logger.info(f"📊 Polling-Validierung abgeschlossen: ")
+                logger.info(f"   ✅ {valid_sensors} gültige Sensoren gefunden")
+                logger.info(f"   📋 {total_sensors} Sensoren im NASA Repository verfügbar")
              
         if 'broker-url' not in self.MQTT:
             raise ConfigException(argument=self.MQTT['broker-url'], message="mqtt broker-url config parameter is missing")

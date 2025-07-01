@@ -1,244 +1,439 @@
 import asyncio
-import time
-import datetime
-from typing import Dict, List, Any, Optional
 import json
 import os
-from collections import defaultdict
+import time
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
 from CustomLogger import logger
-from PollingManager import PollingManager
 
 class PacketMonitor:
     """
-    Überwacht die Paketqualität und erstellt regelmäßige Berichte.
+    Überwacht die Qualität der Pakete und erstellt Statistiken.
     
-    Funktionen:
-    - Erfasst ungültige Pakete (ohne x34 Endkennung)
-    - Erstellt stündliche Statistiken der Übertragungsfehler
-    - Generiert tägliche und wöchentliche Berichte
-    - Warnt bei Überschreitung des Schwellwerts (>5% fehlerhafte Pakete)
+    Features:
+    - Protokollierung ungültiger Pakete
+    - Stündliche und tägliche Statistiken
+    - Warnungen bei hoher Fehlerrate
     """
     
-    def __init__(self, polling_manager: PollingManager):
-        """Initialisiert den PacketMonitor mit einem PollingManager."""
-        self.polling_manager = polling_manager
-        self.report_file = "/data/packet_reports.json"
-        self.daily_report_time = "00:00"  # Täglicher Bericht um Mitternacht
-        
-        # Statistik-Tracking
-        self.daily_reports = {}
-        self.weekly_reports = {}
-        
-        # Lade vorhandene Berichte
-        self._load_reports()
+    _instance = None
+    _initialized = False
+    _stats_file = "/data/packet_stats.json"
+    _report_file = "/data/packet_reports.json"
     
-    def record_invalid_packet(self, packet_data: bytes, error_message: str):
-        """
-        Zeichnet ein ungültiges Paket auf.
-        
-        Args:
-            packet_data: Die Rohdaten des ungültigen Pakets
-            error_message: Die Fehlermeldung
-        """
-        # Informiere den PollingManager über das ungültige Paket
-        self.polling_manager.record_packet(is_valid=False)
-        
-        # Logge Details für Debugging
-        logger.warning(f"⚠️ Ungültiges Paket: {error_message}")
-        logger.warning(f"⚠️ Paket-Hex: {[hex(x) for x in packet_data]}")
-        logger.warning(f"⚠️ Paket-Rohdaten: {packet_data}")
+    _stats = {
+        "total_packets": 0,
+        "valid_packets": 0,
+        "invalid_packets": 0,
+        "error_rate": 0.0,
+        "hourly": {},
+        "daily": {},
+        "last_reset": None
+    }
     
-    def record_valid_packet(self):
-        """Zeichnet ein gültiges Paket auf."""
-        # Informiere den PollingManager über das gültige Paket
-        self.polling_manager.record_packet(is_valid=True)
+    _reports = {
+        "hourly": [],
+        "daily": [],
+        "weekly": []
+    }
     
-    async def start_monitoring(self):
-        """Startet die regelmäßige Berichterstattung."""
-        logger.info("📊 Starte Paketqualitäts-Monitoring...")
-        
-        # Starte den täglichen Berichts-Task
-        asyncio.create_task(self._schedule_daily_report())
-        
-        # Starte den wöchentlichen Berichts-Task
-        asyncio.create_task(self._schedule_weekly_report())
+    _error_threshold = 0.05  # 5% Fehlerrate als Warnschwelle
     
-    async def _schedule_daily_report(self):
-        """Plant den täglichen Bericht."""
-        while True:
-            # Berechne Zeit bis zum nächsten täglichen Bericht
-            now = datetime.datetime.now()
-            report_hour, report_minute = map(int, self.daily_report_time.split(':'))
-            next_report = now.replace(hour=report_hour, minute=report_minute, second=0, microsecond=0)
-            
-            if next_report <= now:
-                next_report = next_report + datetime.timedelta(days=1)
-                
-            wait_seconds = (next_report - now).total_seconds()
-            logger.info(f"📅 Nächster täglicher Paketqualitäts-Bericht in {wait_seconds/3600:.1f} Stunden")
-            
-            await asyncio.sleep(wait_seconds)
-            
-            # Generiere und speichere den täglichen Bericht
-            report = self.polling_manager.generate_report()
-            report_date = now.strftime("%Y-%m-%d")
-            self.daily_reports[report_date] = report
-            self._save_reports()
-            
-            logger.info(f"📊 Täglicher Paketqualitäts-Bericht erstellt für {report_date}")
-            logger.info(report.split('\n')[0])  # Zeige nur die erste Zeile im Log
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(PacketMonitor, cls).__new__(cls)
+        return cls._instance
     
-    async def _schedule_weekly_report(self):
-        """Plant den wöchentlichen Bericht."""
-        while True:
-            # Berechne Zeit bis zum nächsten wöchentlichen Bericht (Sonntag)
-            now = datetime.datetime.now()
-            days_until_sunday = 6 - now.weekday() if now.weekday() < 6 else 7
-            next_report = now.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=days_until_sunday)
-            
-            wait_seconds = (next_report - now).total_seconds()
-            logger.info(f"📅 Nächster wöchentlicher Paketqualitäts-Bericht in {wait_seconds/86400:.1f} Tagen")
-            
-            await asyncio.sleep(wait_seconds)
-            
-            # Generiere und speichere den wöchentlichen Bericht
-            report = self._generate_weekly_report()
-            report_week = now.strftime("%Y-W%W")
-            self.weekly_reports[report_week] = report
-            self._save_reports()
-            
-            logger.info(f"📊 Wöchentlicher Paketqualitäts-Bericht erstellt für {report_week}")
-            logger.info(report.split('\n')[0])  # Zeige nur die erste Zeile im Log
-    
-    def _generate_weekly_report(self) -> str:
-        """
-        Generiert einen wöchentlichen Bericht basierend auf den täglichen Berichten.
-        
-        Returns:
-            Formatierter wöchentlicher Bericht als String
-        """
-        now = datetime.datetime.now()
-        start_of_week = now - datetime.timedelta(days=now.weekday() + 1)
-        end_of_week = start_of_week + datetime.timedelta(days=6)
-        
-        report = [
-            "📊 EHS-Sentinel Wöchentlicher Paketqualitäts-Bericht",
-            "=" * 60,
-            f"Zeitraum: {start_of_week.strftime('%Y-%m-%d')} bis {end_of_week.strftime('%Y-%m-%d')}",
-            "",
-            "Tägliche Zusammenfassung:",
-            "-" * 60
-        ]
-        
-        # Sammle Daten aus den täglichen Berichten der letzten Woche
-        weekly_total = 0
-        weekly_invalid = 0
-        daily_stats = []
-        
-        for i in range(7):
-            day = start_of_week + datetime.timedelta(days=i)
-            day_key = day.strftime("%Y-%m-%d")
-            
-            if day_key in self.daily_reports:
-                # Extrahiere Zahlen aus dem täglichen Bericht
-                daily_report = self.daily_reports[day_key]
-                try:
-                    total_line = [line for line in daily_report.split('\n') if "Gesamtpakete:" in line][0]
-                    invalid_line = [line for line in daily_report.split('\n') if "Ungültige Pakete:" in line][0]
-                    
-                    total = int(total_line.split(": ")[1])
-                    invalid = int(invalid_line.split(": ")[1])
-                    
-                    weekly_total += total
-                    weekly_invalid += invalid
-                    
-                    error_rate = (invalid / total * 100) if total > 0 else 0
-                    status = "✅ Gut" if error_rate <= 5 else "⚠️ Problematisch"
-                    
-                    daily_stats.append((day_key, total, invalid, error_rate, status))
-                except (IndexError, ValueError):
-                    daily_stats.append((day_key, "Keine Daten", "Keine Daten", 0, "❓ Unbekannt"))
-            else:
-                daily_stats.append((day_key, "Keine Daten", "Keine Daten", 0, "❓ Unbekannt"))
-        
-        # Füge tägliche Statistiken zum Bericht hinzu
-        for day_key, total, invalid, error_rate, status in daily_stats:
-            if isinstance(total, int) and isinstance(invalid, int):
-                report.append(f"{day_key}: {total} Pakete, {invalid} ungültig ({error_rate:.2f}%) - {status}")
-            else:
-                report.append(f"{day_key}: {total}, {invalid} - {status}")
-        
-        # Füge wöchentliche Zusammenfassung hinzu
-        report.extend([
-            "",
-            "Wöchentliche Zusammenfassung:",
-            "-" * 60
-        ])
-        
-        if weekly_total > 0:
-            weekly_error_rate = (weekly_invalid / weekly_total * 100)
-            weekly_status = "✅ Gut" if weekly_error_rate <= 5 else "⚠️ Problematisch"
-            
-            report.extend([
-                f"Gesamtpakete: {weekly_total}",
-                f"Ungültige Pakete: {weekly_invalid}",
-                f"Fehlerrate: {weekly_error_rate:.2f}% - {weekly_status}"
-            ])
-        else:
-            report.append("Keine ausreichenden Daten für eine wöchentliche Zusammenfassung.")
-        
-        # Füge Empfehlungen hinzu
-        report.extend([
-            "",
-            "Empfehlungen:",
-            "-" * 60
-        ])
-        
-        if weekly_total > 0 and (weekly_invalid / weekly_total * 100) > 5:
-            report.extend([
-                "⚠️ Die wöchentliche Paketfehlerrate ist zu hoch (>5%). Bitte überprüfen Sie:",
-                "1. Physische Verbindung (Kabel, Stecker, Adapter)",
-                "2. WLAN-Kanal bei Funkstörungen",
-                "3. Modbus-Einstellungen (Baudrate, Parität)",
-                "4. Elektromagnetische Störquellen in der Nähe",
-                "",
-                "Erwägen Sie eine Reduzierung der Polling-Frequenz, um die Belastung zu verringern."
-            ])
-        else:
-            report.append("✅ Die wöchentliche Verbindungsqualität ist gut. Keine Maßnahmen erforderlich.")
-        
-        return "\n".join(report)
-    
-    def _save_reports(self):
-        """Speichert die Berichte in eine JSON-Datei."""
-        try:
-            reports_data = {
-                "daily_reports": self.daily_reports,
-                "weekly_reports": self.weekly_reports,
-                "last_updated": datetime.datetime.now().isoformat()
-            }
-            
-            with open(self.report_file, 'w') as f:
-                json.dump(reports_data, f, indent=2)
-                
-            logger.debug(f"📊 Paketberichte gespeichert: {self.report_file}")
-        except Exception as e:
-            logger.error(f"❌ Fehler beim Speichern der Paketberichte: {e}")
-    
-    def _load_reports(self):
-        """Lädt vorhandene Berichte aus der JSON-Datei."""
-        if not os.path.exists(self.report_file):
-            logger.info(f"📊 Keine vorhandenen Paketberichte gefunden, starte neue Aufzeichnung")
+    def __init__(self):
+        if self._initialized:
             return
             
+        self._initialized = True
+        
+        # Lade vorhandene Statistiken, falls vorhanden
+        self._load_stats()
+        self._load_reports()
+        
+        # Setze den Zeitpunkt des letzten Resets, falls nicht vorhanden
+        if not self._stats["last_reset"]:
+            self._stats["last_reset"] = datetime.now().isoformat()
+    
+    def log_invalid_packet(self, message: str, hex_data: List[str], raw_data: bytes):
+        """Protokolliert ein ungültiges Paket und aktualisiert die Statistiken."""
+        # Protokolliere das ungültige Paket
+        logger.warning(f"⚠️ Ungültiges Paket: {message}")
+        logger.warning(f"⚠️ Paket-Hex: {hex_data}")
+        logger.warning(f"⚠️ Paket-Rohdaten: {raw_data}")
+        
+        # Aktualisiere die Statistiken
+        self._stats["total_packets"] += 1
+        self._stats["invalid_packets"] += 1
+        
+        # Aktualisiere stündliche Statistiken
+        hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
+        if hour_key not in self._stats["hourly"]:
+            self._stats["hourly"][hour_key] = {
+                "total": 0,
+                "valid": 0,
+                "invalid": 0,
+                "error_rate": 0.0
+            }
+        
+        self._stats["hourly"][hour_key]["total"] += 1
+        self._stats["hourly"][hour_key]["invalid"] += 1
+        
+        # Aktualisiere tägliche Statistiken
+        day_key = datetime.now().strftime("%Y-%m-%d")
+        if day_key not in self._stats["daily"]:
+            self._stats["daily"][day_key] = {
+                "total": 0,
+                "valid": 0,
+                "invalid": 0,
+                "error_rate": 0.0
+            }
+        
+        self._stats["daily"][day_key]["total"] += 1
+        self._stats["daily"][day_key]["invalid"] += 1
+        
+        # Berechne Fehlerraten
+        self._update_error_rates()
+        
+        # Speichere die Statistiken
+        self._save_stats()
+        
+        # Prüfe, ob die Fehlerrate den Schwellwert überschreitet
+        if self._stats["error_rate"] > self._error_threshold:
+            logger.error(f"🚨 WARNUNG: Fehlerrate von {self._stats['error_rate']:.1%} überschreitet den Schwellwert von {self._error_threshold:.1%}!")
+            logger.error("🚨 Bitte überprüfen Sie die physische Verbindung, WLAN-Kanäle und Modbus-Einstellungen.")
+    
+    def log_valid_packet(self):
+        """Protokolliert ein gültiges Paket und aktualisiert die Statistiken."""
+        # Aktualisiere die Statistiken
+        self._stats["total_packets"] += 1
+        self._stats["valid_packets"] += 1
+        
+        # Aktualisiere stündliche Statistiken
+        hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
+        if hour_key not in self._stats["hourly"]:
+            self._stats["hourly"][hour_key] = {
+                "total": 0,
+                "valid": 0,
+                "invalid": 0,
+                "error_rate": 0.0
+            }
+        
+        self._stats["hourly"][hour_key]["total"] += 1
+        self._stats["hourly"][hour_key]["valid"] += 1
+        
+        # Aktualisiere tägliche Statistiken
+        day_key = datetime.now().strftime("%Y-%m-%d")
+        if day_key not in self._stats["daily"]:
+            self._stats["daily"][day_key] = {
+                "total": 0,
+                "valid": 0,
+                "invalid": 0,
+                "error_rate": 0.0
+            }
+        
+        self._stats["daily"][day_key]["total"] += 1
+        self._stats["daily"][day_key]["valid"] += 1
+        
+        # Berechne Fehlerraten
+        self._update_error_rates()
+        
+        # Speichere die Statistiken alle 100 gültigen Pakete
+        if self._stats["valid_packets"] % 100 == 0:
+            self._save_stats()
+    
+    def _update_error_rates(self):
+        """Aktualisiert alle Fehlerraten in den Statistiken."""
+        # Gesamtfehlerrate
+        if self._stats["total_packets"] > 0:
+            self._stats["error_rate"] = self._stats["invalid_packets"] / self._stats["total_packets"]
+        
+        # Stündliche Fehlerraten
+        for hour, data in self._stats["hourly"].items():
+            if data["total"] > 0:
+                data["error_rate"] = data["invalid"] / data["total"]
+        
+        # Tägliche Fehlerraten
+        for day, data in self._stats["daily"].items():
+            if data["total"] > 0:
+                data["error_rate"] = data["invalid"] / data["total"]
+    
+    def _load_stats(self):
+        """Lädt Paketstatistiken aus der Datei, falls vorhanden."""
         try:
-            with open(self.report_file, 'r') as f:
-                reports_data = json.load(f)
-                
-            self.daily_reports = reports_data.get("daily_reports", {})
-            self.weekly_reports = reports_data.get("weekly_reports", {})
-                
-            logger.info(f"📊 Paketberichte geladen: {len(self.daily_reports)} tägliche, {len(self.weekly_reports)} wöchentliche")
+            if os.path.exists(self._stats_file):
+                with open(self._stats_file, 'r') as f:
+                    self._stats = json.load(f)
+                logger.debug(f"Paketstatistiken geladen: {self._stats}")
+            else:
+                logger.info("📊 Keine vorhandenen Paketstatistiken gefunden, starte neue Aufzeichnung")
         except Exception as e:
-            logger.error(f"❌ Fehler beim Laden der Paketberichte: {e}")
+            logger.warning(f"Fehler beim Laden der Paketstatistiken: {e}")
+    
+    def _save_stats(self):
+        """Speichert Paketstatistiken in eine Datei."""
+        try:
+            with open(self._stats_file, 'w') as f:
+                json.dump(self._stats, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Fehler beim Speichern der Paketstatistiken: {e}")
+    
+    def _load_reports(self):
+        """Lädt Paketberichte aus der Datei, falls vorhanden."""
+        try:
+            if os.path.exists(self._report_file):
+                with open(self._report_file, 'r') as f:
+                    self._reports = json.load(f)
+                logger.debug(f"Paketberichte geladen: {self._reports}")
+            else:
+                logger.info("📊 Keine vorhandenen Paketberichte gefunden, starte neue Aufzeichnung")
+        except Exception as e:
+            logger.warning(f"Fehler beim Laden der Paketberichte: {e}")
+    
+    def _save_reports(self):
+        """Speichert Paketberichte in eine Datei."""
+        try:
+            with open(self._report_file, 'w') as f:
+                json.dump(self._reports, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Fehler beim Speichern der Paketberichte: {e}")
+    
+    async def start_monitoring(self):
+        """Startet die Paketqualitätsüberwachung."""
+        logger.info("📊 Starte Paketqualitäts-Monitoring...")
+        
+        # Starte die Tasks für die regelmäßigen Berichte
+        asyncio.create_task(self._generate_hourly_reports())
+        asyncio.create_task(self._generate_daily_reports())
+        asyncio.create_task(self._generate_weekly_reports())
+    
+    async def _generate_hourly_reports(self):
+        """Generiert stündliche Berichte über die Paketqualität."""
+        # Berechne die Zeit bis zur nächsten vollen Stunde
+        now = datetime.now()
+        next_hour = (now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1))
+        wait_seconds = (next_hour - now).total_seconds()
+        
+        await asyncio.sleep(wait_seconds)
+        
+        while True:
+            try:
+                # Generiere den stündlichen Bericht
+                hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
+                
+                # Hole die Daten für die aktuelle Stunde
+                hour_data = self._stats["hourly"].get(hour_key, {
+                    "total": 0,
+                    "valid": 0,
+                    "invalid": 0,
+                    "error_rate": 0.0
+                })
+                
+                # Erstelle den Bericht
+                report = {
+                    "timestamp": datetime.now().isoformat(),
+                    "period": "hourly",
+                    "data": hour_data,
+                    "threshold_exceeded": hour_data["error_rate"] > self._error_threshold
+                }
+                
+                # Füge den Bericht zur Liste hinzu
+                self._reports["hourly"].append(report)
+                
+                # Begrenze die Anzahl der Berichte auf die letzten 24
+                if len(self._reports["hourly"]) > 24:
+                    self._reports["hourly"] = self._reports["hourly"][-24:]
+                
+                # Speichere die Berichte
+                self._save_reports()
+                
+                # Protokolliere den Bericht
+                if hour_data["total"] > 0:
+                    logger.info(f"📊 Stündlicher Paketqualitäts-Bericht ({hour_key}):")
+                    logger.info(f"   Gesamt: {hour_data['total']} Pakete")
+                    logger.info(f"   Gültig: {hour_data['valid']} Pakete ({hour_data['valid']/hour_data['total']:.1%})")
+                    logger.info(f"   Ungültig: {hour_data['invalid']} Pakete ({hour_data['error_rate']:.1%})")
+                    
+                    if hour_data["error_rate"] > self._error_threshold:
+                        logger.warning(f"⚠️ Fehlerrate von {hour_data['error_rate']:.1%} überschreitet den Schwellwert!")
+                
+                # Warte bis zur nächsten vollen Stunde
+                await asyncio.sleep(3600)
+                
+            except Exception as e:
+                logger.error(f"Fehler bei der Generierung des stündlichen Berichts: {e}")
+                logger.error(traceback.format_exc())
+                await asyncio.sleep(60)  # Bei Fehlern eine Minute warten
+    
+    async def _generate_daily_reports(self):
+        """Generiert tägliche Berichte über die Paketqualität."""
+        # Berechne die Zeit bis zum nächsten Tag (00:00 Uhr)
+        now = datetime.now()
+        next_day = (now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1))
+        wait_seconds = (next_day - now).total_seconds()
+        
+        # Protokolliere, wann der nächste Bericht erstellt wird
+        hours_to_wait = wait_seconds / 3600
+        logger.info(f"📅 Nächster täglicher Paketqualitäts-Bericht in {hours_to_wait:.1f} Stunden")
+        
+        await asyncio.sleep(wait_seconds)
+        
+        while True:
+            try:
+                # Generiere den täglichen Bericht
+                day_key = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+                
+                # Hole die Daten für den vorherigen Tag
+                day_data = self._stats["daily"].get(day_key, {
+                    "total": 0,
+                    "valid": 0,
+                    "invalid": 0,
+                    "error_rate": 0.0
+                })
+                
+                # Erstelle den Bericht
+                report = {
+                    "timestamp": datetime.now().isoformat(),
+                    "period": "daily",
+                    "date": day_key,
+                    "data": day_data,
+                    "threshold_exceeded": day_data["error_rate"] > self._error_threshold
+                }
+                
+                # Füge den Bericht zur Liste hinzu
+                self._reports["daily"].append(report)
+                
+                # Begrenze die Anzahl der Berichte auf die letzten 30
+                if len(self._reports["daily"]) > 30:
+                    self._reports["daily"] = self._reports["daily"][-30:]
+                
+                # Speichere die Berichte
+                self._save_reports()
+                
+                # Protokolliere den Bericht
+                if day_data["total"] > 0:
+                    logger.info(f"📊 Täglicher Paketqualitäts-Bericht ({day_key}):")
+                    logger.info(f"   Gesamt: {day_data['total']} Pakete")
+                    logger.info(f"   Gültig: {day_data['valid']} Pakete ({day_data['valid']/day_data['total']:.1%})")
+                    logger.info(f"   Ungültig: {day_data['invalid']} Pakete ({day_data['error_rate']:.1%})")
+                    
+                    if day_data["error_rate"] > self._error_threshold:
+                        logger.warning(f"⚠️ Fehlerrate von {day_data['error_rate']:.1%} überschreitet den Schwellwert!")
+                        logger.warning("⚠️ Empfehlungen zur Fehlerbehebung:")
+                        logger.warning("   1. Prüfen Sie die physische Verbindung (Kabel, Stecker)")
+                        logger.warning("   2. Testen Sie alternative WLAN-Kanäle bei Funkstörungen")
+                        logger.warning("   3. Validieren Sie die Modbus-Einstellungen (Baudrate, Parität)")
+                
+                # Warte bis zum nächsten Tag
+                await asyncio.sleep(86400)
+                
+            except Exception as e:
+                logger.error(f"Fehler bei der Generierung des täglichen Berichts: {e}")
+                logger.error(traceback.format_exc())
+                await asyncio.sleep(3600)  # Bei Fehlern eine Stunde warten
+    
+    async def _generate_weekly_reports(self):
+        """Generiert wöchentliche Berichte über die Paketqualität."""
+        # Berechne die Zeit bis zum nächsten Montag (00:00 Uhr)
+        now = datetime.now()
+        days_until_monday = (7 - now.weekday()) % 7
+        if days_until_monday == 0:
+            days_until_monday = 7
+        
+        next_monday = (now.replace(hour=0, minute=0, second=0, microsecond=0) + 
+                       timedelta(days=days_until_monday))
+        wait_seconds = (next_monday - now).total_seconds()
+        
+        # Protokolliere, wann der nächste Bericht erstellt wird
+        days_to_wait = wait_seconds / 86400
+        logger.info(f"📅 Nächster wöchentlicher Paketqualitäts-Bericht in {days_to_wait:.1f} Tagen")
+        
+        await asyncio.sleep(wait_seconds)
+        
+        while True:
+            try:
+                # Generiere den wöchentlichen Bericht
+                end_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+                start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+                
+                # Sammle die Daten für die letzte Woche
+                week_data = {
+                    "total": 0,
+                    "valid": 0,
+                    "invalid": 0,
+                    "error_rate": 0.0,
+                    "days": {}
+                }
+                
+                # Sammle die täglichen Daten der letzten Woche
+                for i in range(7):
+                    day_key = (datetime.now() - timedelta(days=i+1)).strftime("%Y-%m-%d")
+                    day_data = self._stats["daily"].get(day_key, {
+                        "total": 0,
+                        "valid": 0,
+                        "invalid": 0,
+                        "error_rate": 0.0
+                    })
+                    
+                    week_data["total"] += day_data["total"]
+                    week_data["valid"] += day_data["valid"]
+                    week_data["invalid"] += day_data["invalid"]
+                    week_data["days"][day_key] = day_data
+                
+                # Berechne die wöchentliche Fehlerrate
+                if week_data["total"] > 0:
+                    week_data["error_rate"] = week_data["invalid"] / week_data["total"]
+                
+                # Erstelle den Bericht
+                report = {
+                    "timestamp": datetime.now().isoformat(),
+                    "period": "weekly",
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "data": week_data,
+                    "threshold_exceeded": week_data["error_rate"] > self._error_threshold
+                }
+                
+                # Füge den Bericht zur Liste hinzu
+                self._reports["weekly"].append(report)
+                
+                # Begrenze die Anzahl der Berichte auf die letzten 12
+                if len(self._reports["weekly"]) > 12:
+                    self._reports["weekly"] = self._reports["weekly"][-12:]
+                
+                # Speichere die Berichte
+                self._save_reports()
+                
+                # Protokolliere den Bericht
+                if week_data["total"] > 0:
+                    logger.info(f"📊 Wöchentlicher Paketqualitäts-Bericht ({start_date} bis {end_date}):")
+                    logger.info(f"   Gesamt: {week_data['total']} Pakete")
+                    logger.info(f"   Gültig: {week_data['valid']} Pakete ({week_data['valid']/week_data['total']:.1%})")
+                    logger.info(f"   Ungültig: {week_data['invalid']} Pakete ({week_data['error_rate']:.1%})")
+                    
+                    if week_data["error_rate"] > self._error_threshold:
+                        logger.warning(f"⚠️ Fehlerrate von {week_data['error_rate']:.1%} überschreitet den Schwellwert!")
+                        logger.warning("⚠️ Empfehlungen zur Fehlerbehebung:")
+                        logger.warning("   1. Prüfen Sie die physische Verbindung (Kabel, Stecker)")
+                        logger.warning("   2. Testen Sie alternative WLAN-Kanäle bei Funkstörungen")
+                        logger.warning("   3. Validieren Sie die Modbus-Einstellungen (Baudrate, Parität)")
+                
+                # Warte bis zum nächsten Montag
+                await asyncio.sleep(7 * 86400)
+                
+            except Exception as e:
+                logger.error(f"Fehler bei der Generierung des wöchentlichen Berichts: {e}")
+                logger.error(traceback.format_exc())
+                await asyncio.sleep(3600)  # Bei Fehlern eine Stunde warten
+    
+    def get_stats(self) -> Dict:
+        """Gibt die aktuellen Paketstatistiken zurück."""
+        return self._stats
+    
+    def get_reports(self) -> Dict:
+        """Gibt die Paketberichte zurück."""
+        return self._reports
