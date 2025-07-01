@@ -23,7 +23,7 @@ class PacketMonitor:
     _stats_file = "/data/packet_stats.json"
     _report_file = "/data/packet_reports.json"
     
-    # Vollständige Initialisierung der Statistik-Struktur
+    # Vollständige Initialisierung der Statistik-Struktur mit Standardwerten
     _stats = {
         "total_packets": 0,
         "valid_packets": 0,
@@ -57,134 +57,176 @@ class PacketMonitor:
         self._load_stats()
         self._load_reports()
         
-        # Setze den Zeitpunkt des letzten Resets, falls nicht vorhanden
+        # Stelle sicher, dass alle erforderlichen Felder in den Statistiken vorhanden sind
+        self._ensure_stats_structure()
+    
+    def _ensure_stats_structure(self):
+        """Stellt sicher, dass alle erforderlichen Felder in den Statistiken vorhanden sind."""
+        # Grundlegende Felder
+        if "total_packets" not in self._stats:
+            self._stats["total_packets"] = 0
+        if "valid_packets" not in self._stats:
+            self._stats["valid_packets"] = 0
+        if "invalid_packets" not in self._stats:
+            self._stats["invalid_packets"] = 0
+        if "error_rate" not in self._stats:
+            self._stats["error_rate"] = 0.0
         if "last_reset" not in self._stats or not self._stats["last_reset"]:
             self._stats["last_reset"] = datetime.now().isoformat()
+            
+        # Stündliche und tägliche Statistiken
+        if "hourly" not in self._stats:
+            self._stats["hourly"] = {}
+        if "daily" not in self._stats:
+            self._stats["daily"] = {}
+            
+        # Berichte
+        if "hourly" not in self._reports:
+            self._reports["hourly"] = []
+        if "daily" not in self._reports:
+            self._reports["daily"] = []
+        if "weekly" not in self._reports:
+            self._reports["weekly"] = []
     
     def log_invalid_packet(self, message: str, hex_data: List[str], raw_data: bytes):
         """Protokolliert ein ungültiges Paket und aktualisiert die Statistiken."""
-        # Protokolliere das ungültige Paket nur bei Debug-Level
-        logger.debug(f"⚠️ Ungültiges Paket: {message}")
-        logger.debug(f"⚠️ Paket-Hex: {hex_data}")
-        logger.debug(f"⚠️ Paket-Rohdaten: {raw_data}")
-        
-        # Aktualisiere die Statistiken
-        self._stats["total_packets"] += 1
-        self._stats["invalid_packets"] += 1
-        
-        # Aktualisiere stündliche Statistiken
-        hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
-        if "hourly" not in self._stats:
-            self._stats["hourly"] = {}
+        try:
+            # Protokolliere das ungültige Paket nur bei Debug-Level
+            logger.debug(f"⚠️ Ungültiges Paket: {message}")
+            logger.debug(f"⚠️ Paket-Hex: {hex_data}")
+            logger.debug(f"⚠️ Paket-Rohdaten: {raw_data}")
             
-        if hour_key not in self._stats["hourly"]:
-            self._stats["hourly"][hour_key] = {
-                "total": 0,
-                "valid": 0,
-                "invalid": 0,
-                "error_rate": 0.0
-            }
-        
-        self._stats["hourly"][hour_key]["total"] += 1
-        self._stats["hourly"][hour_key]["invalid"] += 1
-        
-        # Aktualisiere tägliche Statistiken
-        day_key = datetime.now().strftime("%Y-%m-%d")
-        if "daily" not in self._stats:
-            self._stats["daily"] = {}
+            # Aktualisiere die Statistiken
+            self._stats["total_packets"] += 1
+            self._stats["invalid_packets"] += 1
             
-        if day_key not in self._stats["daily"]:
-            self._stats["daily"][day_key] = {
-                "total": 0,
-                "valid": 0,
-                "invalid": 0,
-                "error_rate": 0.0
-            }
-        
-        self._stats["daily"][day_key]["total"] += 1
-        self._stats["daily"][day_key]["invalid"] += 1
-        
-        # Berechne Fehlerraten
-        self._update_error_rates()
-        
-        # Speichere die Statistiken alle 100 ungültigen Pakete
-        if self._stats["invalid_packets"] % 100 == 0:
-            self._save_stats()
-        
-        # Prüfe, ob die Fehlerrate den Schwellwert überschreitet (nur alle 1000 Pakete)
-        if self._stats["total_packets"] % 1000 == 0 and self._stats["error_rate"] > self._error_threshold:
-            logger.warning(f"🚨 WARNUNG: Fehlerrate von {self._stats['error_rate']:.1%} überschreitet den Schwellwert von {self._error_threshold:.1%}!")
-            logger.warning("🚨 Bitte überprüfen Sie die physische Verbindung, WLAN-Kanäle und Modbus-Einstellungen.")
+            # Aktualisiere stündliche Statistiken
+            hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
+            if "hourly" not in self._stats:
+                self._stats["hourly"] = {}
+                
+            if hour_key not in self._stats["hourly"]:
+                self._stats["hourly"][hour_key] = {
+                    "total": 0,
+                    "valid": 0,
+                    "invalid": 0,
+                    "error_rate": 0.0
+                }
+            
+            self._stats["hourly"][hour_key]["total"] += 1
+            self._stats["hourly"][hour_key]["invalid"] += 1
+            
+            # Aktualisiere tägliche Statistiken
+            day_key = datetime.now().strftime("%Y-%m-%d")
+            if "daily" not in self._stats:
+                self._stats["daily"] = {}
+                
+            if day_key not in self._stats["daily"]:
+                self._stats["daily"][day_key] = {
+                    "total": 0,
+                    "valid": 0,
+                    "invalid": 0,
+                    "error_rate": 0.0
+                }
+            
+            self._stats["daily"][day_key]["total"] += 1
+            self._stats["daily"][day_key]["invalid"] += 1
+            
+            # Berechne Fehlerraten
+            self._update_error_rates()
+            
+            # Speichere die Statistiken alle 100 ungültigen Pakete
+            if self._stats["invalid_packets"] % 100 == 0:
+                self._save_stats()
+            
+            # Prüfe, ob die Fehlerrate den Schwellwert überschreitet (nur alle 1000 Pakete)
+            if self._stats["total_packets"] % 1000 == 0 and self._stats["error_rate"] > self._error_threshold:
+                logger.warning(f"🚨 WARNUNG: Fehlerrate von {self._stats['error_rate']:.1%} überschreitet den Schwellwert von {self._error_threshold:.1%}!")
+                logger.warning("🚨 Bitte überprüfen Sie die physische Verbindung, WLAN-Kanäle und Modbus-Einstellungen.")
+        except Exception as e:
+            logger.error(f"Fehler in log_invalid_packet: {e}")
+            logger.error(traceback.format_exc())
     
     def log_valid_packet(self):
         """Protokolliert ein gültiges Paket und aktualisiert die Statistiken."""
-        # Aktualisiere die Statistiken
-        self._stats["total_packets"] += 1
-        self._stats["valid_packets"] += 1
-        
-        # Aktualisiere stündliche Statistiken
-        hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
-        if "hourly" not in self._stats:
-            self._stats["hourly"] = {}
+        try:
+            # Aktualisiere die Statistiken
+            self._stats["total_packets"] += 1
+            self._stats["valid_packets"] += 1
             
-        if hour_key not in self._stats["hourly"]:
-            self._stats["hourly"][hour_key] = {
-                "total": 0,
-                "valid": 0,
-                "invalid": 0,
-                "error_rate": 0.0
-            }
-        
-        self._stats["hourly"][hour_key]["total"] += 1
-        self._stats["hourly"][hour_key]["valid"] += 1
-        
-        # Aktualisiere tägliche Statistiken
-        day_key = datetime.now().strftime("%Y-%m-%d")
-        if "daily" not in self._stats:
-            self._stats["daily"] = {}
+            # Aktualisiere stündliche Statistiken
+            hour_key = datetime.now().strftime("%Y-%m-%d %H:00")
+            if "hourly" not in self._stats:
+                self._stats["hourly"] = {}
+                
+            if hour_key not in self._stats["hourly"]:
+                self._stats["hourly"][hour_key] = {
+                    "total": 0,
+                    "valid": 0,
+                    "invalid": 0,
+                    "error_rate": 0.0
+                }
             
-        if day_key not in self._stats["daily"]:
-            self._stats["daily"][day_key] = {
-                "total": 0,
-                "valid": 0,
-                "invalid": 0,
-                "error_rate": 0.0
-            }
-        
-        self._stats["daily"][day_key]["total"] += 1
-        self._stats["daily"][day_key]["valid"] += 1
-        
-        # Berechne Fehlerraten
-        self._update_error_rates()
-        
-        # Speichere die Statistiken alle 1000 gültigen Pakete
-        if self._stats["valid_packets"] % 1000 == 0:
-            self._save_stats()
+            self._stats["hourly"][hour_key]["total"] += 1
+            self._stats["hourly"][hour_key]["valid"] += 1
+            
+            # Aktualisiere tägliche Statistiken
+            day_key = datetime.now().strftime("%Y-%m-%d")
+            if "daily" not in self._stats:
+                self._stats["daily"] = {}
+                
+            if day_key not in self._stats["daily"]:
+                self._stats["daily"][day_key] = {
+                    "total": 0,
+                    "valid": 0,
+                    "invalid": 0,
+                    "error_rate": 0.0
+                }
+            
+            self._stats["daily"][day_key]["total"] += 1
+            self._stats["daily"][day_key]["valid"] += 1
+            
+            # Berechne Fehlerraten
+            self._update_error_rates()
+            
+            # Speichere die Statistiken alle 1000 gültigen Pakete
+            if self._stats["valid_packets"] % 1000 == 0:
+                self._save_stats()
+        except Exception as e:
+            logger.error(f"Fehler in log_valid_packet: {e}")
+            logger.error(traceback.format_exc())
     
     def _update_error_rates(self):
         """Aktualisiert alle Fehlerraten in den Statistiken."""
-        # Gesamtfehlerrate
-        if self._stats["total_packets"] > 0:
-            self._stats["error_rate"] = self._stats["invalid_packets"] / self._stats["total_packets"]
-        
-        # Stündliche Fehlerraten
-        if "hourly" in self._stats:
-            for hour, data in self._stats["hourly"].items():
-                if data["total"] > 0:
-                    data["error_rate"] = data["invalid"] / data["total"]
-        
-        # Tägliche Fehlerraten
-        if "daily" in self._stats:
-            for day, data in self._stats["daily"].items():
-                if data["total"] > 0:
-                    data["error_rate"] = data["invalid"] / data["total"]
+        try:
+            # Gesamtfehlerrate
+            if self._stats["total_packets"] > 0:
+                self._stats["error_rate"] = self._stats["invalid_packets"] / self._stats["total_packets"]
+            
+            # Stündliche Fehlerraten
+            if "hourly" in self._stats:
+                for hour, data in self._stats["hourly"].items():
+                    if data["total"] > 0:
+                        data["error_rate"] = data["invalid"] / data["total"]
+            
+            # Tägliche Fehlerraten
+            if "daily" in self._stats:
+                for day, data in self._stats["daily"].items():
+                    if data["total"] > 0:
+                        data["error_rate"] = data["invalid"] / data["total"]
+        except Exception as e:
+            logger.error(f"Fehler in _update_error_rates: {e}")
+            logger.error(traceback.format_exc())
     
     def _load_stats(self):
         """Lädt Paketstatistiken aus der Datei, falls vorhanden."""
         try:
             if os.path.exists(self._stats_file):
                 with open(self._stats_file, 'r') as f:
-                    self._stats = json.load(f)
+                    loaded_stats = json.load(f)
+                    # Merge loaded stats with default structure
+                    for key, value in loaded_stats.items():
+                        self._stats[key] = value
                 logger.debug(f"Paketstatistiken geladen: {self._stats}")
             else:
                 logger.info("📊 Keine vorhandenen Paketstatistiken gefunden, starte neue Aufzeichnung")
@@ -208,7 +250,10 @@ class PacketMonitor:
         try:
             if os.path.exists(self._report_file):
                 with open(self._report_file, 'r') as f:
-                    self._reports = json.load(f)
+                    loaded_reports = json.load(f)
+                    # Merge loaded reports with default structure
+                    for key, value in loaded_reports.items():
+                        self._reports[key] = value
                 logger.debug(f"Paketberichte geladen: {self._reports}")
             else:
                 logger.info("📊 Keine vorhandenen Paketberichte gefunden, starte neue Aufzeichnung")
@@ -290,6 +335,7 @@ class PacketMonitor:
                 
             except Exception as e:
                 logger.error(f"Fehler bei der Generierung des stündlichen Berichts: {e}")
+                logger.error(traceback.format_exc())
                 await asyncio.sleep(60)  # Bei Fehlern eine Minute warten
     
     async def _generate_daily_reports(self):
@@ -355,6 +401,7 @@ class PacketMonitor:
                 
             except Exception as e:
                 logger.error(f"Fehler bei der Generierung des täglichen Berichts: {e}")
+                logger.error(traceback.format_exc())
                 await asyncio.sleep(3600)  # Bei Fehlern eine Stunde warten
     
     async def _generate_weekly_reports(self):
@@ -445,6 +492,7 @@ class PacketMonitor:
                 
             except Exception as e:
                 logger.error(f"Fehler bei der Generierung des wöchentlichen Berichts: {e}")
+                logger.error(traceback.format_exc())
                 await asyncio.sleep(3600)  # Bei Fehlern eine Stunde warten
     
     def get_stats(self) -> Dict:
