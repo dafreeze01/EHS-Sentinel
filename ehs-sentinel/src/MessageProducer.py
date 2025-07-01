@@ -171,6 +171,11 @@ class MessageProducer:
                     value_raw = value.to_bytes(2, byteorder='big', signed=True) 
                 elif tmpmsg.packet_message_type == 2:
                     value_raw = value.to_bytes(4, byteorder='big', signed=True) 
+                elif tmpmsg.packet_message_type == 3:
+                    # STR-Typ: Erstelle einen leeren String-Payload für Polling
+                    # Für String-Typen verwenden wir einen minimalen Payload
+                    value_raw = b'\x00\x00\x00\x00'  # 4 Bytes für String-Polling
+                    logger.debug(f"Created STR-type message for {message} with minimal payload")
                 else:
                     raise MessageWarningException(argument=tmpmsg.packet_message_type, message=f"Unknown Type for {message} type:")
             except (OverflowError, ValueError) as e:
@@ -182,6 +187,8 @@ class MessageProducer:
                     value_raw = value.to_bytes(2, byteorder='big', signed=True) 
                 elif tmpmsg.packet_message_type == 2:
                     value_raw = value.to_bytes(4, byteorder='big', signed=True) 
+                elif tmpmsg.packet_message_type == 3:
+                    value_raw = b'\x00\x00\x00\x00'
                     
             tmpmsg.set_packet_payload_raw(value_raw)
             return tmpmsg

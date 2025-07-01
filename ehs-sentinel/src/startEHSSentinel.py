@@ -21,18 +21,19 @@ from NASAMessage import NASAMessage
 
 # Version mit automatischem Timestamp
 VERSION_BASE = "1.2.0"
-VERSION_PATCH = "1"
+VERSION_PATCH = "2"
 version = f"{VERSION_BASE}.{VERSION_PATCH}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
 build_info = {
     "version": f"{VERSION_BASE}.{VERSION_PATCH}",
     "build_date": datetime.datetime.now().isoformat(),
     "build_type": "Home Assistant Addon",
     "features": [
-        "Comprehensive sensor polling (ALL sensors)",
+        "Complete sensor polling (ALL available sensors)",
+        "Enhanced logging with sensor descriptions",
+        "Fixed STR-type sensor handling (Type 3)",
+        "Improved error handling with graceful fallbacks",
         "Secure arithmetic evaluation (SafeArithmetic)",
-        "Enhanced error handling with graceful fallbacks",
-        "Improved logging with configurable levels",
-        "Complete code consolidation and cleanup"
+        "Comprehensive device count reporting"
     ]
 }
 
@@ -209,20 +210,31 @@ async def make_default_request_packet(producer: MessageProducer, config: EHSConf
     schedule = poller['schedule']
     message_list = config.POLLING['groups'][group_name]
     
-    logger.info(f"🔄 Setting up Poller '{group_name}' every {schedule} seconds")
-    logger.info(f"📊 Polling {len(message_list)} sensors in group '{group_name}'")
+    # Zähle verfügbare Sensoren im NASA Repository
+    total_nasa_sensors = len(config.NASA_REPO) if hasattr(config, 'NASA_REPO') else 0
     
-    # Log first few sensors for verification
+    logger.info(f"🔄 Setting up Poller '{group_name}' every {schedule} seconds")
+    logger.info(f"📊 Polling {len(message_list)}/{total_nasa_sensors} sensors in group '{group_name}'")
+    
+    # Log first few sensors for verification with descriptions
     if len(message_list) > 0:
         sample_sensors = message_list[:5]
-        logger.info(f"📋 Sample sensors: {', '.join(sample_sensors)}")
+        logger.info(f"📋 Sample sensors:")
+        for i, sensor in enumerate(sample_sensors, 1):
+            description = ""
+            if sensor in config.NASA_REPO:
+                description = config.NASA_REPO[sensor].get('description', '')
+                if description:
+                    description = f" - {description}"
+            logger.info(f"   {i}. {sensor}{description}")
+        
         if len(message_list) > 5:
             logger.info(f"   ... and {len(message_list) - 5} more sensors")
 
     while True:
         try:
             await producer.read_request(message_list)
-            logger.info(f"✅ Polled {len(message_list)} sensors from group '{group_name}'")
+            logger.info(f"✅ Polled {len(message_list)}/{total_nasa_sensors} sensors from group '{group_name}'")
         except MessageWarningException as e:
             logger.warning(f"⚠️ Polling Messages was not successful for group '{group_name}'")
             logger.warning(f"Error processing message: {e}")

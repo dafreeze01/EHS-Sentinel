@@ -90,10 +90,18 @@ class MQTTClient:
             self.known_topics = list(filter(None, [x.strip() for x in payload.decode().split(",")]))
             if properties['retain'] == True:
                 if self.config.LOGGING['deviceAdded']:
-                    logger.info(f"Loaded devices from known devices Topic:")
+                    total_available = len(self.config.NASA_REPO) if hasattr(self.config, 'NASA_REPO') else "unknown"
+                    logger.info(f"📊 Loaded devices from known devices Topic ({len(self.known_topics)}/{total_available} total sensors):")
 
                     for idx, devname in enumerate(self.known_topics, start=1):
-                        logger.info(f"Device no. {idx:<3}:  {devname} ")
+                        # Hole Beschreibung aus NASA Repository
+                        description = ""
+                        if hasattr(self.config, 'NASA_REPO') and devname in self.config.NASA_REPO:
+                            description = self.config.NASA_REPO[devname].get('description', '')
+                            if description:
+                                description = f" - {description}"
+                        
+                        logger.info(f"   Device {idx:>3}/{len(self.known_topics)}: {devname}{description}")
                 else:
                     logger.debug(f"Loaded devices from known devices Topic:")
                     for idx, devname in enumerate(self.known_topics):
@@ -141,10 +149,21 @@ class MQTTClient:
 
     def refresh_known_devices(self, devname):
         self.known_topics.append(devname)
+        
+        # Hole Beschreibung aus NASA Repository
+        description = ""
+        if hasattr(self.config, 'NASA_REPO') and devname in self.config.NASA_REPO:
+            description = self.config.NASA_REPO[devname].get('description', '')
+            if description:
+                description = f" - {description}"
+        
+        total_available = len(self.config.NASA_REPO) if hasattr(self.config, 'NASA_REPO') else "unknown"
+        
         if self.config.LOGGING['deviceAdded']:
-            logger.info(f"Device added no. {len(self.known_topics):<3}:  {devname} ")
+            logger.info(f"📱 Device added {len(self.known_topics):>3}/{total_available}: {devname}{description}")
         else:
             logger.debug(f"Device added no. {len(self.known_topics):<3}:  {devname} ")
+        
         self._publish(f"{self.topicPrefix.replace('/', '')}/{self.known_devices_topic}", ",".join(self.known_topics), retain=True)
     
     async def publish_message(self, name, value):        
@@ -308,7 +327,7 @@ class MQTTClient:
 
     def _get_device(self):
         # Dynamic version with build timestamp
-        sw_version = f"1.1.0-{datetime.datetime.now().strftime('%Y%m%d')}"
+        sw_version = f"1.2.0-{datetime.datetime.now().strftime('%Y%m%d')}"
         return {
                 "identifiers": self.DEVICE_ID,
                 "name": "Samsung EHS",
