@@ -11,12 +11,16 @@ arch:
   - i386
 startup: application
 boot: auto
+# Standardwerte für die Konfiguration
 options:
+  # Verbindungseinstellungen
   verbindung_typ: "tcp"
   tcp_ip: "192.168.1.100"
   tcp_port: 4196
   serial_device: "/dev/ttyUSB0"
   serial_baudrate: 9600
+  
+  # MQTT Einstellungen
   mqtt_broker_url: "core-mosquitto"
   mqtt_broker_port: 1883
   mqtt_benutzer: ""
@@ -25,7 +29,12 @@ options:
   mqtt_topic_prefix: "ehsSentinel"
   mqtt_homeassistant_discovery: true
   mqtt_camel_case_topics: true
+  
+  # Erweiterte Einstellungen (WARNUNG)
   steuerung_erlauben: false
+  polling_aktiviert: false
+  
+  # Protokollierung
   protokoll_datei: ""
   log_geraet_hinzugefuegt: true
   log_nachricht_nicht_gefunden: false
@@ -34,13 +43,17 @@ options:
   log_poller_nachricht: false
   log_steuerungs_nachricht: false
   log_ungueltiges_paket: false
-  polling_aktiviert: false
+
+# Schema für die Validierung der Eingaben
 schema:
+  # Verbindungseinstellungen
   verbindung_typ: "list(tcp|serial)"
   tcp_ip: "str"
   tcp_port: "port"
   serial_device: "str"
   serial_baudrate: "int"
+  
+  # MQTT Einstellungen
   mqtt_broker_url: "str"
   mqtt_broker_port: "port"
   mqtt_benutzer: "str?"
@@ -49,7 +62,12 @@ schema:
   mqtt_topic_prefix: "str"
   mqtt_homeassistant_discovery: "bool"
   mqtt_camel_case_topics: "bool"
+  
+  # Erweiterte Einstellungen
   steuerung_erlauben: "bool"
+  polling_aktiviert: "bool"
+  
+  # Protokollierung
   protokoll_datei: "str?"
   log_geraet_hinzugefuegt: "bool"
   log_nachricht_nicht_gefunden: "bool"
@@ -58,14 +76,21 @@ schema:
   log_poller_nachricht: "bool"
   log_steuerungs_nachricht: "bool"
   log_ungueltiges_paket: "bool"
-  polling_aktiviert: "bool"
+
+# Netzwerk-Ports die das Addon benötigt
 ports:
   4196/tcp: 4196
+
+# Serielle Geräte die das Addon verwenden kann
 devices:
   - /dev/ttyUSB0
   - /dev/ttyUSB1
   - /dev/ttyACM0
   - /dev/ttyACM1
+
+# MQTT Service wird benötigt
 services:
   - mqtt:need
+
+# Docker Image (wird später erstellt)
 image: "ghcr.io/dafreeze01/ehs-sentinel-addon"

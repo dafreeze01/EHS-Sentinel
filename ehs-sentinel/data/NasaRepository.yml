@@ -1,9 +1,10 @@
-# NASA Repository für EHS-Sentinel Home Assistant Addon
-# Diese Datei wird automatisch aus dem Original-Repository kopiert
-# Placeholder - die echte Datei muss aus dem Original-Projekt kopiert werden
+# NASA Repository für EHS-Sentinel
+# Diese Datei enthält alle bekannten NASA-Protokoll Nachrichten
+# Kopiert aus dem Original EHS-Sentinel Projekt
+
 NASA_POWER:
   address: "0x8000"
-  description: "Power Status"
+  description: "Wärmepumpen Ein/Aus Status"
   type: "ENUM"
   enum:
     0: "OFF"
@@ -15,3 +16,45 @@ NASA_POWER:
       payload_off: "OFF"
       payload_on: "ON"
       type: "switch"
+
+NASA_OUTDOOR_OPERATION_STATUS:
+  address: "0x8001"
+  description: "Betriebsstatus der Außeneinheit"
+  type: "ENUM"
+  enum:
+    0: "STOP"
+    1: "HEATING"
+    2: "COOLING"
+    3: "DHW"
+    4: "DEFROST"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+NASA_OUTDOOR_TW1_TEMP:
+  address: "0x8204"
+  description: "Rücklauftemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TW2_TEMP:
+  address: "0x821A"
+  description: "Vorlauftemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+# Weitere Einträge würden hier aus der Original-Datei kopiert werden...

@@ -1,73 +1,77 @@
 configuration:
-  verbindung:
-    name: "Verbindung"
-    description: "Konfiguration der Verbindung zur Wärmepumpe"
+  # Verbindungseinstellungen
   verbindung_typ:
     name: "Verbindungstyp"
     description: "Wählen Sie zwischen TCP (RS485-zu-Ethernet) oder Serial (USB-RS485)"
   tcp_ip:
     name: "TCP IP-Adresse"
-    description: "IP-Adresse des RS485-zu-Ethernet Adapters"
+    description: "IP-Adresse des RS485-zu-Ethernet Adapters (z.B. 192.168.1.100)"
   tcp_port:
     name: "TCP Port"
-    description: "Port des RS485-zu-Ethernet Adapters"
+    description: "Port des RS485-zu-Ethernet Adapters (Standard: 4196)"
   serial_device:
     name: "Serielles Gerät"
     description: "Pfad zum seriellen Gerät (z.B. /dev/ttyUSB0)"
   serial_baudrate:
     name: "Baudrate"
-    description: "Baudrate für die serielle Verbindung"
+    description: "Baudrate für die serielle Verbindung (Standard: 9600)"
+  
+  # MQTT Einstellungen
   mqtt_broker_url:
     name: "MQTT Broker URL"
-    description: "URL oder IP-Adresse des MQTT Brokers"
+    description: "URL oder IP-Adresse des MQTT Brokers (Standard: core-mosquitto)"
   mqtt_broker_port:
     name: "MQTT Broker Port"
-    description: "Port des MQTT Brokers"
+    description: "Port des MQTT Brokers (Standard: 1883)"
   mqtt_benutzer:
     name: "MQTT Benutzername"
-    description: "MQTT Benutzername (optional)"
+    description: "MQTT Benutzername (leer lassen wenn keine Authentifizierung)"
   mqtt_passwort:
     name: "MQTT Passwort"
-    description: "MQTT Passwort (optional)"
+    description: "MQTT Passwort (leer lassen wenn keine Authentifizierung)"
   mqtt_client_id:
     name: "MQTT Client ID"
-    description: "MQTT Client ID"
+    description: "Eindeutige Client ID für MQTT (Standard: ehs-sentinel)"
   mqtt_topic_prefix:
     name: "MQTT Topic Präfix"
-    description: "Präfix für MQTT Topics"
+    description: "Präfix für alle MQTT Topics (Standard: ehsSentinel)"
   mqtt_homeassistant_discovery:
     name: "Home Assistant Auto-Discovery"
     description: "Aktiviert automatische Geräteerkennung in Home Assistant"
   mqtt_camel_case_topics:
     name: "CamelCase Topic Namen"
-    description: "Verwendet CamelCase für Topic Namen"
+    description: "Verwendet CamelCase für Topic Namen (empfohlen: aktiviert)"
+  
+  # Erweiterte Einstellungen mit Warnungen
   steuerung_erlauben:
     name: "⚠️ Steuerung erlauben"
-    description: "WARNUNG: Ermöglicht die Steuerung der Wärmepumpe (auf eigene Gefahr)"
-  protokoll_datei:
-    name: "Protokoll Datei"
-    description: "Pfad zur Protokoll Datei (optional)"
-  log_geraet_hinzugefuegt:
-    name: "Log: Gerät hinzugefügt"
-    description: "Protokolliert wenn neue Geräte hinzugefügt werden"
-  log_nachricht_nicht_gefunden:
-    name: "Log: Nachricht nicht gefunden"
-    description: "Protokolliert wenn Nachrichten nicht im Repository gefunden werden"
-  log_paket_nicht_von_innen_aussen:
-    name: "Log: Paket nicht von Innen/Außen"
-    description: "Protokolliert Pakete die nicht von Innen- oder Außeneinheit stammen"
-  log_verarbeitete_nachricht:
-    name: "Log: Verarbeitete Nachricht"
-    description: "Protokolliert verarbeitete Nachrichten"
-  log_poller_nachricht:
-    name: "Log: Poller Nachricht"
-    description: "Protokolliert Poller Nachrichten"
-  log_steuerungs_nachricht:
-    name: "Log: Steuerungs Nachricht"
-    description: "Protokolliert Steuerungsnachrichten"
-  log_ungueltiges_paket:
-    name: "Log: Ungültiges Paket"
-    description: "Protokolliert ungültige Pakete"
+    description: "WARNUNG: Ermöglicht die Steuerung der Wärmepumpe über Home Assistant. Dies greift aktiv in die Kommunikation ein. Nutzung auf eigene Gefahr!"
   polling_aktiviert:
     name: "⚠️ Polling aktiviert"
-    description: "WARNUNG: Aktiviert die aktive Abfrage von Werten (auf eigene Gefahr)"
+    description: "WARNUNG: Aktiviert die aktive Abfrage von Werten. Dies greift aktiv in die Kommunikation ein. Nutzung auf eigene Gefahr!"
+  
+  # Protokollierung
+  protokoll_datei:
+    name: "Protokoll Datei"
+    description: "Pfad zur Protokoll Datei (optional, leer lassen für keine Protokollierung)"
+  log_geraet_hinzugefuegt:
+    name: "Log: Gerät hinzugefügt"
+    description: "Protokolliert wenn neue Geräte zur Home Assistant Discovery hinzugefügt werden"
+  log_nachricht_nicht_gefunden:
+    name: "Log: Nachricht nicht gefunden"
+    description: "Protokolliert wenn empfangene Nachrichten nicht im NASA Repository gefunden werden"
+  log_paket_nicht_von_innen_aussen:
+    name: "Log: Paket nicht von Innen/Außeneinheit"
+    description: "Protokolliert Pakete die nicht von der Innen- oder Außeneinheit stammen"
+  log_verarbeitete_nachricht:
+    name: "Log: Verarbeitete Nachrichten"
+    description: "Protokolliert alle verarbeiteten Nachrichten mit Werten"
+  log_poller_nachricht:
+    name: "Log: Poller Nachrichten"
+    description: "Protokolliert detaillierte Poller-Aktivitäten (nur bei aktiviertem Polling)"
+  log_steuerungs_nachricht:
+    name: "Log: Steuerungs Nachrichten"
+    description: "Protokolliert detaillierte Steuerungsnachrichten (nur bei aktivierter Steuerung)"
+  log_ungueltiges_paket:
+    name: "Log: Ungültige Pakete"
+    description: "Protokolliert ungültige oder fehlerhafte Datenpakete"
