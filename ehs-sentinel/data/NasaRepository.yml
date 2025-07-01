@@ -1,7 +1,7 @@
-# NASA Repository für EHS-Sentinel
-# Diese Datei enthält alle bekannten NASA-Protokoll Nachrichten
-# Kopiert aus dem Original EHS-Sentinel Projekt
+# NASA Repository für EHS-Sentinel Home Assistant Addon
+# Diese Datei enthält die wichtigsten NASA-Protokoll Nachrichten
 
+# Grundlegende Steuerung
 NASA_POWER:
   address: "0x8000"
   description: "Wärmepumpen Ein/Aus Status"
@@ -17,8 +17,25 @@ NASA_POWER:
       payload_on: "ON"
       type: "switch"
 
-NASA_OUTDOOR_OPERATION_STATUS:
+NASA_INDOOR_OPMODE:
   address: "0x8001"
+  description: "Betriebsmodus der Inneneinheit"
+  type: "ENUM"
+  enum:
+    0: "AUTO"
+    1: "HEAT"
+    2: "COOL"
+    3: "DHW"
+    4: "FAN"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    platform:
+      type: "select"
+      options: ["AUTO", "HEAT", "COOL", "DHW", "FAN"]
+
+NASA_OUTDOOR_OPERATION_STATUS:
+  address: "0x8002"
   description: "Betriebsstatus der Außeneinheit"
   type: "ENUM"
   enum:
@@ -31,6 +48,7 @@ NASA_OUTDOOR_OPERATION_STATUS:
     default_platform: "sensor"
     writable: false
 
+# Temperaturen
 NASA_OUTDOOR_TW1_TEMP:
   address: "0x8204"
   description: "Rücklauftemperatur"
@@ -57,4 +75,1462 @@ NASA_OUTDOOR_TW2_TEMP:
     unit: "°C"
     device_class: "temperature"
 
-# Weitere Einträge würden hier aus der Original-Datei kopiert werden...
+NASA_OUTDOOR_OUT_TEMP:
+  address: "0x8206"
+  description: "Außentemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_INDOOR_DHW_CURRENT_TEMP:
+  address: "0x8208"
+  description: "Aktuelle Warmwassertemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+# Leistung und Effizienz
+NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT:
+  address: "0x8233"
+  description: "Aktuelle Leistungsaufnahme"
+  type: "VAR"
+  signed: false
+  unit: "W"
+  arithmetic: "packed_value / 8.6"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "W"
+    device_class: "power"
+
+NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT_ACCUM:
+  address: "0x8413"
+  description: "Gesamte verbrauchte Energie"
+  type: "LVAR"
+  signed: false
+  unit: "kWh"
+  arithmetic: "packed_value / 1000"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "kWh"
+    device_class: "energy"
+
+# Kompressor
+NASA_OUTDOOR_COMP1_ORDER_HZ:
+  address: "0x8217"
+  description: "Kompressor Sollfrequenz"
+  type: "VAR"
+  signed: false
+  unit: "Hz"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "Hz"
+    device_class: "frequency"
+
+NASA_OUTDOOR_COMP1_RUN_HZ:
+  address: "0x8218"
+  description: "Kompressor Istfrequenz"
+  type: "VAR"
+  signed: false
+  unit: "Hz"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "Hz"
+    device_class: "frequency"
+
+NASA_OUTDOOR_COMP1_TARGET_HZ:
+  address: "0x8219"
+  description: "Kompressor Zielfrequenz"
+  type: "VAR"
+  signed: false
+  unit: "Hz"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "Hz"
+    device_class: "frequency"
+
+# Lüfter
+NASA_OUTDOOR_FAN_RPM1:
+  address: "0x82D0"
+  description: "Außenlüfter Drehzahl"
+  type: "VAR"
+  signed: false
+  unit: "rpm"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "rpm"
+    state_class: "measurement"
+
+# Status
+DHW_POWER:
+  address: "0x8003"
+  description: "Warmwasser Ein/Aus"
+  type: "ENUM"
+  enum:
+    0: "OFF"
+    1: "ON"
+  hass_opts:
+    default_platform: "binary_sensor"
+    writable: false
+    platform:
+      payload_off: "OFF"
+      payload_on: "ON"
+
+CONTROL_SILENCE:
+  address: "0x8004"
+  description: "Leiser Modus"
+  type: "ENUM"
+  enum:
+    0: "OFF"
+    1: "ON"
+  hass_opts:
+    default_platform: "binary_sensor"
+    writable: false
+    platform:
+      payload_off: "OFF"
+      payload_on: "ON"
+
+NASA_OUTDOOR_DEFROST_STEP:
+  address: "0x8005"
+  description: "Abtau-Status"
+  type: "ENUM"
+  enum:
+    0: "NONE"
+    1: "STEP_1"
+    2: "STEP_2"
+    3: "STEP_3"
+    4: "STEP_4"
+    5: "STEP_5"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+# Durchfluss
+VAR_IN_FLOW_SENSOR_CALC:
+  address: "0x8220"
+  description: "Wasserdurchfluss"
+  type: "VAR"
+  signed: false
+  unit: "l/min"
+  arithmetic: "packed_value / 60"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "l/min"
+    state_class: "measurement"
+
+# Berechnete Werte (EHS-Sentinel spezifisch)
+NASA_EHSSENTINEL_HEAT_OUTPUT:
+  address: "0x9999"
+  description: "Berechnete Heizleistung"
+  type: "VAR"
+  signed: false
+  unit: "W"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "W"
+    device_class: "power"
+
+NASA_EHSSENTINEL_COP:
+  address: "0x9998"
+  description: "Berechneter COP"
+  type: "VAR"
+  signed: false
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    state_class: "measurement"
+
+NASA_EHSSENTINEL_TOTAL_COP:
+  address: "0x9997"
+  description: "Gesamt COP"
+  type: "VAR"
+  signed: false
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    state_class: "measurement"
+
+# Lebensdauer-Statistiken
+LVAR_IN_MINUTES_SINCE_INSTALLATION:
+  address: "0x4423"
+  description: "Minuten seit Installation"
+  type: "LVAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+LVAR_IN_MINUTES_ACTIVE:
+  address: "0x4424"
+  description: "Aktive Minuten"
+  type: "LVAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+LVAR_IN_GENERATED_POWER_LAST_MINUTE:
+  address: "0x4426"
+  description: "Erzeugte Leistung letzte Minute"
+  type: "LVAR"
+  signed: false
+  unit: "kW"
+  arithmetic: "packed_value / 1000"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "kW"
+    device_class: "power"
+
+LVAR_IN_TOTAL_GENERATED_POWER:
+  address: "0x4427"
+  description: "Gesamt erzeugte Energie"
+  type: "LVAR"
+  signed: false
+  unit: "kWh"
+  arithmetic: "packed_value / 1000"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "kWh"
+    device_class: "energy"
+
+# Heizungsregelung
+VAR_IN_TEMP_WATER_LAW_TARGET_F:
+  address: "0x4211"
+  description: "Heizkurve Zieltemperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  reverse-arithmetic: "value * 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 15
+      max: 65
+      step: 1
+      mode: "slider"
+
+# FSV Werte - Basis-Set für Polling (falls aktiviert)
+VAR_IN_FSV_1011:
+  address: "0x2011"
+  description: "Wasser Ausgangstemperatur für Kühlung Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
+
+VAR_IN_FSV_1012:
+  address: "0x2012"
+  description: "Wasser Ausgangstemperatur für Kühlung Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
+
+VAR_IN_FSV_1021:
+  address: "0x2021"
+  description: "Raumtemperatur für Kühlung Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 16
+      max: 32
+      step: 1
+
+VAR_IN_FSV_1022:
+  address: "0x2022"
+  description: "Raumtemperatur für Kühlung Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 16
+      max: 32
+      step: 1
+
+VAR_IN_FSV_1031:
+  address: "0x2031"
+  description: "Wasser Ausgangstemperatur für Heizung Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
+
+VAR_IN_FSV_1032:
+  address: "0x2032"
+  description: "Wasser Ausgangstemperatur für Heizung Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
+
+VAR_IN_FSV_1041:
+  address: "0x2041"
+  description: "Raumtemperatur für Heizung Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 16
+      max: 32
+      step: 1
+
+VAR_IN_FSV_1042:
+  address: "0x2042"
+  description: "Raumtemperatur für Heizung Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 16
+      max: 32
+      step: 1
+
+VAR_IN_FSV_1051:
+  address: "0x2051"
+  description: "Warmwasser Tank Temperatur Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 40
+      max: 75
+      step: 1
+
+VAR_IN_FSV_1052:
+  address: "0x2052"
+  description: "Warmwasser Tank Temperatur Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    unit: "°C"
+    device_class: "temperature"
+    platform:
+      type: "number"
+      min: 40
+      max: 75
+      step: 1
+
+# Weitere FSV Werte (vereinfacht für Addon)
+VAR_IN_FSV_2011:
+  address: "0x2061"
+  description: "Heizung Außentemperatur für WL Max."
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2012:
+  address: "0x2062"
+  description: "Heizung Außentemperatur für WL Min."
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2021:
+  address: "0x2071"
+  description: "Heizung Wasserausgangstemperatur UFH/WL1 Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2022:
+  address: "0x2072"
+  description: "Heizung Wasserausgangstemperatur UFH/WL1 Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2031:
+  address: "0x2081"
+  description: "Heizung Wasserausgangstemperatur FCU/WL2 Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2032:
+  address: "0x2082"
+  description: "Heizung Wasserausgangstemperatur FCU/WL2 Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+ENUM_IN_FSV_2041:
+  address: "0x2091"
+  description: "Heizung WL Auswahl"
+  type: "ENUM"
+  enum:
+    0: "WL1"
+    1: "WL2"
+    2: "AUTO"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_2051:
+  address: "0x20A1"
+  description: "Kühlung Außentemperatur für WL Max."
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2052:
+  address: "0x20A2"
+  description: "Kühlung Außentemperatur für WL Min."
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2061:
+  address: "0x20B1"
+  description: "Kühlung Wasserausgangstemperatur UFH/WL1 Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2062:
+  address: "0x20B2"
+  description: "Kühlung Wasserausgangstemperatur UFH/WL1 Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2071:
+  address: "0x20C1"
+  description: "Kühlung Wasserausgangstemperatur FCU/WL2 Max."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_2072:
+  address: "0x20C2"
+  description: "Kühlung Wasserausgangstemperatur FCU/WL2 Min."
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+ENUM_IN_FSV_2081:
+  address: "0x20D1"
+  description: "Kühlung WL Auswahl"
+  type: "ENUM"
+  enum:
+    0: "WL1"
+    1: "WL2"
+    2: "AUTO"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_2091:
+  address: "0x20E1"
+  description: "Externer Raumthermostat UFH"
+  type: "ENUM"
+  enum:
+    0: "NICHT_VERWENDET"
+    1: "VERWENDET"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_2092:
+  address: "0x20E2"
+  description: "Externer Raumthermostat FCU"
+  type: "ENUM"
+  enum:
+    0: "NICHT_VERWENDET"
+    1: "VERWENDET"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_2093:
+  address: "0x20E3"
+  description: "Zusätzlicher Thermostat 1"
+  type: "ENUM"
+  enum:
+    0: "NICHT_VERWENDET"
+    1: "VERWENDET"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_2094:
+  address: "0x20E4"
+  description: "Zusätzlicher Thermostat 2"
+  type: "ENUM"
+  enum:
+    0: "NICHT_VERWENDET"
+    1: "VERWENDET"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+# FSV 30xx - DHW Grundeinstellungen
+ENUM_IN_FSV_3011:
+  address: "0x3011"
+  description: "Warmwasser Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_3021:
+  address: "0x3021"
+  description: "Wärmepumpe Max. Temperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_3022:
+  address: "0x3022"
+  description: "Wärmepumpe Stopp"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_3023:
+  address: "0x3023"
+  description: "Wärmepumpe Start"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_3024:
+  address: "0x3024"
+  description: "Wärmepumpe Min. Raumheizung Betriebszeit"
+  type: "VAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+VAR_IN_FSV_3025:
+  address: "0x3025"
+  description: "Wärmepumpe Max. Warmwasser Betriebszeit"
+  type: "VAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+VAR_IN_FSV_3026:
+  address: "0x3026"
+  description: "Wärmepumpe Max. Raumheizung Betriebszeit"
+  type: "VAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+ENUM_IN_FSV_3031:
+  address: "0x3031"
+  description: "Zusatzheizung verwenden"
+  type: "ENUM"
+  enum:
+    0: "NEIN"
+    1: "JA"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_3032:
+  address: "0x3032"
+  description: "Zusatzheizung Verzögerungszeit"
+  type: "VAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+VAR_IN_FSV_3033:
+  address: "0x3033"
+  description: "Zusatzheizung Parameter"
+  type: "VAR"
+  signed: false
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_3041:
+  address: "0x3041"
+  description: "Desinfektion Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "binary_sensor"
+    writable: false
+    platform:
+      payload_off: "DEAKTIVIERT"
+      payload_on: "AKTIVIERT"
+
+ENUM_IN_FSV_3042:
+  address: "0x3042"
+  description: "Desinfektion Intervall"
+  type: "ENUM"
+  enum:
+    0: "TÄGLICH"
+    1: "WÖCHENTLICH"
+    2: "MONATLICH"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_3043:
+  address: "0x3043"
+  description: "Desinfektion Startzeit"
+  type: "VAR"
+  signed: false
+  unit: "h"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "h"
+    device_class: "duration"
+
+VAR_IN_FSV_3044:
+  address: "0x3044"
+  description: "Desinfektion Zieltemperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_3045:
+  address: "0x3045"
+  description: "Desinfektion Dauer"
+  type: "VAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+VAR_IN_FSV_3046:
+  address: "0x3046"
+  description: "Desinfektion Max. Zeit"
+  type: "VAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+ENUM_IN_FSV_3051:
+  address: "0x3051"
+  description: "Erzwungene Warmwasser Betriebszeit AUS Funktion"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_3052:
+  address: "0x3052"
+  description: "Erzwungene Warmwasser Betriebszeit Dauer"
+  type: "VAR"
+  signed: false
+  unit: "min"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "min"
+    device_class: "duration"
+
+ENUM_IN_FSV_3061:
+  address: "0x3061"
+  description: "Solaranlage/Warmwasser Thermostat Kombination"
+  type: "ENUM"
+  enum:
+    0: "KEINE"
+    1: "SOLAR"
+    2: "THERMOSTAT"
+    3: "BEIDES"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_3071:
+  address: "0x3071"
+  description: "Richtung 3-Wege-Ventil Warmwassertank"
+  type: "ENUM"
+  enum:
+    0: "NORMAL"
+    1: "UMGEKEHRT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_3081:
+  address: "0x3081"
+  description: "Energiemessung Zusatzheizung 1. Stufe Kapazität"
+  type: "VAR"
+  signed: false
+  unit: "kW"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "kW"
+    device_class: "power"
+
+VAR_IN_FSV_3082:
+  address: "0x3082"
+  description: "Energiemessung Zusatzheizung 2. Stufe Kapazität"
+  type: "VAR"
+  signed: false
+  unit: "kW"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "kW"
+    device_class: "power"
+
+VAR_IN_FSV_3083:
+  address: "0x3083"
+  description: "Energiemessung Zusatzheizung Kapazität"
+  type: "VAR"
+  signed: false
+  unit: "kW"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "kW"
+    device_class: "power"
+
+# FSV 40xx - Heizung (Basis-Set)
+ENUM_IN_FSV_4011:
+  address: "0x4011"
+  description: "Wärmepumpe Heizung/Warmwasser Priorität"
+  type: "ENUM"
+  enum:
+    0: "HEIZUNG"
+    1: "WARMWASSER"
+    2: "AUTO"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_4012:
+  address: "0x4012"
+  description: "Wärmepumpe Außentemperatur für Priorität"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_4013:
+  address: "0x4013"
+  description: "Wärmepumpe Heizung AUS"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+ENUM_IN_FSV_4021:
+  address: "0x4021"
+  description: "Zusatzheizung Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_4022:
+  address: "0x4022"
+  description: "Zusatzheizung Priorität"
+  type: "ENUM"
+  enum:
+    0: "WÄRMEPUMPE"
+    1: "ZUSATZHEIZUNG"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_4023:
+  address: "0x4023"
+  description: "Zusatzheizung Kälteschutz"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_4024:
+  address: "0x4024"
+  description: "Zusatzheizung Schwellentemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_4025:
+  address: "0x4025"
+  description: "Zusatzheizung Abtau-Backup Temperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+ENUM_IN_FSV_4031:
+  address: "0x4031"
+  description: "Backup Kessel Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_4032:
+  address: "0x4032"
+  description: "Backup Kessel Priorität"
+  type: "ENUM"
+  enum:
+    0: "WÄRMEPUMPE"
+    1: "KESSEL"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_4033:
+  address: "0x4033"
+  description: "Backup Kessel Schwellenleistung"
+  type: "VAR"
+  signed: false
+  unit: "kW"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "kW"
+    device_class: "power"
+
+ENUM_IN_FSV_4041:
+  address: "0x4041"
+  description: "Mischventil Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_4042:
+  address: "0x4042"
+  description: "Mischventil Ziel ΔT (Heizung)"
+  type: "VAR"
+  signed: false
+  unit: "K"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "K"
+
+VAR_IN_FSV_4043:
+  address: "0x4043"
+  description: "Mischventil Ziel ΔT (Kühlung)"
+  type: "VAR"
+  signed: false
+  unit: "K"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "K"
+
+ENUM_IN_FSV_4044:
+  address: "0x4044"
+  description: "Mischventil Regelfaktor"
+  type: "ENUM"
+  enum:
+    0: "NIEDRIG"
+    1: "MITTEL"
+    2: "HOCH"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_4045:
+  address: "0x4045"
+  description: "Mischventil Regelfaktor Wert"
+  type: "VAR"
+  signed: false
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_4046:
+  address: "0x4046"
+  description: "Mischventil Laufzeit"
+  type: "VAR"
+  signed: false
+  unit: "s"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "s"
+    device_class: "duration"
+
+ENUM_IN_FSV_4051:
+  address: "0x4051"
+  description: "Inverter Pumpe Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_4052:
+  address: "0x4052"
+  description: "Inverter Pumpe Ziel ΔT"
+  type: "VAR"
+  signed: false
+  unit: "K"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "K"
+
+ENUM_IN_FSV_4053:
+  address: "0x4053"
+  description: "Inverter Pumpe Regelfaktor"
+  type: "ENUM"
+  enum:
+    0: "NIEDRIG"
+    1: "MITTEL"
+    2: "HOCH"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_4061:
+  address: "0x4061"
+  description: "Zonensteuerung Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+# FSV 50xx - Sonstige (Basis-Set)
+VAR_IN_FSV_5011:
+  address: "0x5011"
+  description: "Abwesenheitsmodus Wasserausgangstemperatur für Kühlung"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5012:
+  address: "0x5012"
+  description: "Abwesenheitsmodus Raumtemperatur für Kühlung"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5013:
+  address: "0x5013"
+  description: "Abwesenheitsmodus Wasserausgangstemperatur für Heizung"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5014:
+  address: "0x5014"
+  description: "Abwesenheitsmodus Raumtemperatur für Heizung"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5015:
+  address: "0x5015"
+  description: "Abwesenheitsmodus Auto Kühlung WL1 Temperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5016:
+  address: "0x5016"
+  description: "Abwesenheitsmodus Auto Kühlung WL2 Temperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5017:
+  address: "0x5017"
+  description: "Abwesenheitsmodus Auto Heizung WL1 Temperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5018:
+  address: "0x5018"
+  description: "Abwesenheitsmodus Auto Heizung WL2 Temperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5019:
+  address: "0x5019"
+  description: "Abwesenheitsmodus Ziel Tanktemperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5021:
+  address: "0x5021"
+  description: "Warmwasser Spartemperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+VAR_IN_FSV_5031:
+  address: "0x5031"
+  description: "Zusätzlicher Parameter"
+  type: "VAR"
+  signed: false
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_5022:
+  address: "0x5022"
+  description: "Warmwasser Sparmodus"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "binary_sensor"
+    writable: false
+    platform:
+      payload_off: "DEAKTIVIERT"
+      payload_on: "AKTIVIERT"
+
+VAR_IN_FSV_5023:
+  address: "0x5023"
+  description: "Warmwasser Spar-Thermostat Ein-Temperatur"
+  type: "VAR"
+  signed: false
+  unit: "°C"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+ENUM_IN_FSV_5041:
+  address: "0x5041"
+  description: "Leistungsspitzensteuerung Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_5042:
+  address: "0x5042"
+  description: "Leistungsspitzensteuerung Zwangsabschaltung"
+  type: "ENUM"
+  enum:
+    0: "KEINE"
+    1: "KOMPRESSOR"
+    2: "ZUSATZHEIZUNG"
+    3: "BEIDE"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_5043:
+  address: "0x5043"
+  description: "Leistungsspitzensteuerung Eingangsspannung verwenden"
+  type: "ENUM"
+  enum:
+    0: "NEIN"
+    1: "JA"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_5051:
+  address: "0x5051"
+  description: "Frequenzverhältnis Steuerung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_5061:
+  address: "0x5061"
+  description: "Verhältnis Warmwasserversorgung zu Heizung"
+  type: "ENUM"
+  enum:
+    0: "1:1"
+    1: "1:2"
+    2: "1:3"
+    3: "2:1"
+    4: "3:1"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+ENUM_IN_FSV_5081:
+  address: "0x5081"
+  description: "PV Steuerung Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_5082:
+  address: "0x5082"
+  description: "PV Steuerung Temperaturverschiebung (Kühlung)"
+  type: "VAR"
+  signed: true
+  unit: "K"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "K"
+
+VAR_IN_FSV_5083:
+  address: "0x5083"
+  description: "PV Steuerung Temperaturverschiebung (Heizung)"
+  type: "VAR"
+  signed: true
+  unit: "K"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "K"
+
+ENUM_IN_FSV_5091:
+  address: "0x5091"
+  description: "Smart Grid Steuerung Anwendung"
+  type: "ENUM"
+  enum:
+    0: "DEAKTIVIERT"
+    1: "AKTIVIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+VAR_IN_FSV_5092:
+  address: "0x5092"
+  description: "Smart Grid Steuerung Temperaturverschiebung (Heizung)"
+  type: "VAR"
+  signed: true
+  unit: "K"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "K"
+
+VAR_IN_FSV_5093:
+  address: "0x5093"
+  description: "Smart Grid Steuerung Temperaturverschiebung (Warmwasser)"
+  type: "VAR"
+  signed: true
+  unit: "K"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "K"
+
+ENUM_IN_FSV_5094:
+  address: "0x5094"
+  description: "Smart Grid Steuerung Warmwasser Modus"
+  type: "ENUM"
+  enum:
+    0: "NORMAL"
+    1: "ERHÖHT"
+    2: "REDUZIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
