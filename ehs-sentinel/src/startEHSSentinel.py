@@ -20,9 +20,11 @@ from NASAPacket import NASAPacket, AddressClassEnum, PacketType, DataType
 from NASAMessage import NASAMessage
 
 # Version mit automatischem Timestamp
-version = f"1.1.0-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
+VERSION_BASE = "1.1.0"
+VERSION_PATCH = "1"
+version = f"{VERSION_BASE}.{VERSION_PATCH}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')} Home Assistant Addon"
 build_info = {
-    "version": "1.1.0",
+    "version": f"{VERSION_BASE}.{VERSION_PATCH}",
     "build_date": datetime.datetime.now().isoformat(),
     "build_type": "Home Assistant Addon",
     "fixes": [

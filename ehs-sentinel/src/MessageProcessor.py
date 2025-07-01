@@ -52,8 +52,11 @@ class MessageProcessor:
             logger.debug(f"Message number: {hex(msg.packet_message):<6} {msgname:<50} Type: {msg.packet_message_type} Payload: {msgvalue}")
 
         if self.config.GENERAL['protocolFile'] is not None:
-            with open(self.config.GENERAL['protocolFile'], "a") as protWriter:
-                protWriter.write(f"{hex(msg.packet_message):<6},{msg.packet_message_type},{msgname:<50},{msgvalue}\n")
+            try:
+                with open(self.config.GENERAL['protocolFile'], "a") as protWriter:
+                    protWriter.write(f"{hex(msg.packet_message):<6},{msg.packet_message_type},{msgname:<50},{msgvalue}\n")
+            except Exception as e:
+                logger.warning(f"Could not write to protocol file: {e}")
 
         await self.mqtt.publish_message(msgname, msgvalue)
 
