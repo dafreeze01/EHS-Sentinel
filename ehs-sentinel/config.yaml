@@ -1,6 +1,6 @@
 name: "EHS-Sentinel"
 description: "Samsung EHS Wärmepumpen Integration für Home Assistant"
-version: "1.1.1"
+version: "1.2.0"
 slug: "ehs-sentinel"
 init: false
 arch:
@@ -35,8 +35,18 @@ options:
   steuerung_erlauben: false
   polling_aktiviert: false
   
+  # Polling-Konfiguration (nur wenn polling_aktiviert = true)
+  polling_intervalle:
+    basic_sensors: 30  # Sekunden - Grundlegende Sensoren
+    fsv10xx: 300      # 5 Minuten - Fernbedienung
+    fsv20xx: 600      # 10 Minuten - Wassergesetz
+    fsv30xx: 900      # 15 Minuten - Warmwasser
+    fsv40xx: 1200     # 20 Minuten - Heizung
+    fsv50xx: 1800     # 30 Minuten - Sonstige
+  
   # Protokollierung
   protokoll_datei: ""
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
   log_geraet_hinzugefuegt: true
   log_nachricht_nicht_gefunden: false
   log_paket_nicht_von_innen_aussen: false
@@ -68,8 +78,18 @@ schema:
   steuerung_erlauben: "bool"
   polling_aktiviert: "bool"
   
+  # Polling-Intervalle
+  polling_intervalle:
+    basic_sensors: "int(10,3600)"
+    fsv10xx: "int(60,7200)"
+    fsv20xx: "int(60,7200)"
+    fsv30xx: "int(60,7200)"
+    fsv40xx: "int(60,7200)"
+    fsv50xx: "int(60,7200)"
+  
   # Protokollierung
   protokoll_datei: "str?"
+  log_level: "list(DEBUG|INFO|WARNING|ERROR)"
   log_geraet_hinzugefuegt: "bool"
   log_nachricht_nicht_gefunden: "bool"
   log_paket_nicht_von_innen_aussen: "bool"

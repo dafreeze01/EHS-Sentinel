@@ -2,6 +2,7 @@ from CustomLogger import logger
 from EHSArguments import EHSArguments
 from EHSConfig import EHSConfig
 from EHSExceptions import MessageWarningException
+from SafeArithmetic import safe_eval_arithmetic
 import asyncio
 import traceback
 
@@ -126,7 +127,8 @@ class MessageProducer:
                     if 'reverse-arithmetic' in self.config.NASA_REPO[message]:
                         arithmetic = self.config.NASA_REPO[message]['reverse-arithmetic']
                         try:
-                            return int(eval(arithmetic.replace('value', str(numeric_value))))
+                            # Verwende sichere arithmetische Auswertung
+                            return int(safe_eval_arithmetic(arithmetic, value=numeric_value))
                         except Exception as e:
                             logger.warning(f"Arithmetic Function couldn't been applied for Message {message}, using raw value: reverse-arithmetic = {arithmetic} {e} {numeric_value}")
                             return numeric_value

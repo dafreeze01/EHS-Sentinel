@@ -1,10 +1,30 @@
-# EHS-Sentinel Home Assistant Addon Repository
+# EHS-Sentinel Home Assistant Addon
 
-Dieses Repository enthält das Home Assistant Addon für EHS-Sentinel, welches Samsung EHS Wärmepumpen in Home Assistant integriert.
+Ein umfassendes Home Assistant Addon zur Integration von Samsung EHS Wärmepumpen.
 
-## Lokale Installation (Empfohlen)
+## 🚀 Features
 
-### Automatisches Build-Script
+- **Vollständige Integration**: Überwachung und Steuerung von Samsung EHS Wärmepumpen
+- **MQTT Auto-Discovery**: Automatische Geräteerkennung in Home Assistant
+- **Umfassende Sensoren**: Temperaturen, Drücke, Leistung, Effizienz und mehr
+- **Erweiterte Steuerung**: FSV-Parameter für Heizung, Kühlung und Warmwasser
+- **Sichere Architektur**: Ersetzt unsichere `eval()` durch sichere arithmetische Auswertung
+- **Optimierte Performance**: Verbesserte Polling-Konfiguration und Fehlerbehandlung
+
+## 📋 Voraussetzungen
+
+### Hardware
+- Samsung EHS Wärmepumpe (getestet mit Mono HQ Quiet)
+- RS485-zu-Ethernet Adapter oder USB-RS485 Adapter
+- Home Assistant Installation
+
+### Software
+- Home Assistant Core 2023.1 oder neuer
+- MQTT Broker (z.B. Mosquitto)
+
+## 🔧 Installation
+
+### Automatisches Build (Empfohlen)
 
 1. **Repository klonen:**
    ```bash
@@ -19,99 +39,202 @@ Dieses Repository enthält das Home Assistant Addon für EHS-Sentinel, welches S
 
 3. **Repository in Home Assistant hinzufügen:**
    - Gehen Sie zu **Einstellungen** → **Add-ons** → **Add-on Store**
-   - Klicken Sie auf die drei Punkte (⋮) oben rechts
-   - Wählen Sie **Repositories**
+   - Klicken Sie auf die drei Punkte (⋮) oben rechts → **Repositories**
    - Fügen Sie den lokalen Pfad hinzu: `/pfad/zu/EHS-Sentinel`
 
 4. **Addon installieren:**
-   - Das "EHS-Sentinel" Addon sollte nun im Add-on Store erscheinen
-   - Klicken Sie auf das Addon und dann auf **Installieren**
+   - Das "EHS-Sentinel" Addon erscheint im Add-on Store
+   - Klicken Sie auf **Installieren**
 
-### Manuelle Installation
+## ⚙️ Konfiguration
 
-Falls das automatische Script nicht funktioniert:
+### Verbindungseinstellungen
 
-1. **Dateien vorbereiten:**
-   ```bash
-   # Erstelle Verzeichnisse
-   mkdir -p ehs-sentinel/src ehs-sentinel/data
-   
-   # Kopiere Python-Dateien
-   cp *.py ehs-sentinel/src/
-   cp requirements.txt ehs-sentinel/
-   cp data/NasaRepository.yml ehs-sentinel/data/
-   ```
+**TCP Verbindung (RS485-zu-Ethernet):**
+```yaml
+verbindung_typ: "tcp"
+tcp_ip: "192.168.1.100"
+tcp_port: 4196
+```
 
-2. **Docker Image bauen:**
-   ```bash
-   cd ehs-sentinel
-   docker build -t local/ehs-sentinel-addon:latest .
-   ```
+**Serielle Verbindung (USB-RS485):**
+```yaml
+verbindung_typ: "serial"
+serial_device: "/dev/ttyUSB0"
+serial_baudrate: 9600
+```
 
-3. **In Home Assistant hinzufügen** (wie oben beschrieben)
+### MQTT Konfiguration
 
-## Online Installation (Alternative)
+```yaml
+mqtt_broker_url: "core-mosquitto"
+mqtt_broker_port: 1883
+mqtt_benutzer: ""  # Optional
+mqtt_passwort: ""  # Optional
+mqtt_homeassistant_discovery: true
+```
 
-Falls Sie das Image nicht lokal bauen möchten:
+### Erweiterte Funktionen
 
-1. **Repository hinzufügen:**
-   - Gehen Sie zu **Einstellungen** → **Add-ons** → **Add-on Store**
-   - Klicken Sie auf die drei Punkte (⋮) oben rechts
-   - Wählen Sie **Repositories**
-   - Fügen Sie diese URL hinzu: `https://github.com/dafreeze01/EHS-Sentinel`
+⚠️ **WARNUNG**: Diese Funktionen greifen aktiv in die Wärmepumpen-Kommunikation ein!
 
-2. **Warten auf automatisches Build:**
-   - Das GitHub Actions Workflow baut automatisch das Image
-   - Dies kann beim ersten Mal 10-15 Minuten dauern
+```yaml
+steuerung_erlauben: false  # Ermöglicht Steuerung über Home Assistant
+polling_aktiviert: false   # Aktiviert aktive Datenabfrage
+```
 
-## Konfiguration
+### Polling-Konfiguration
 
-### 🔌 Verbindung
-- **Verbindungstyp**: TCP (für RS485-zu-Ethernet Adapter) oder Serial (für USB-RS485 Adapter)
-- **TCP**: IP-Adresse und Port des Adapters
-- **Serial**: Gerätepfad und Baudrate
+Wenn Polling aktiviert ist, können Sie die Intervalle für verschiedene Sensorgruppen anpassen:
 
-### 📡 MQTT
-- **Broker**: URL und Port Ihres MQTT Brokers (Standard: core-mosquitto)
-- **Authentifizierung**: Benutzername und Passwort (optional)
-- **Auto-Discovery**: Automatische Geräteerkennung in Home Assistant
+```yaml
+polling_intervalle:
+  basic_sensors: 30    # Grundlegende Sensoren (Sekunden)
+  fsv10xx: 300        # Fernbedienung (5 Minuten)
+  fsv20xx: 600        # Wassergesetz (10 Minuten)
+  fsv30xx: 900        # Warmwasser (15 Minuten)
+  fsv40xx: 1200       # Heizung (20 Minuten)
+  fsv50xx: 1800       # Sonstige (30 Minuten)
+```
 
-### ⚠️ Erweiterte Funktionen (WARNUNG)
-- **Steuerung**: Ermöglicht Steuerung der Wärmepumpe über Home Assistant
-- **Polling**: Aktiviert aktive Abfrage von Werten
+### Logging-Optionen
 
-**WICHTIGER SICHERHEITSHINWEIS**: Die erweiterten Funktionen greifen aktiv in die Kommunikation der Wärmepumpe ein. Nutzung erfolgt ausschließlich auf eigene Gefahr!
+```yaml
+log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+log_geraet_hinzugefuegt: true
+log_verarbeitete_nachricht: false
+log_poller_nachricht: false
+```
 
-### 📝 Protokollierung
-Detaillierte Einstellungen für verschiedene Log-Level und Ereignisse.
+## 📊 Verfügbare Sensoren
 
-## Fehlerbehebung
+### Grundlegende Steuerung
+- Wärmepumpen Ein/Aus Status
+- Betriebsmodus (AUTO, HEAT, COOL, DHW, FAN)
+- Außeneinheit Betriebsstatus
+- Warmwasser Status
+- Leiser Modus
+- Abtau-Status
 
-### Addon erscheint nicht im Store
-- Stellen Sie sicher, dass das Docker Image erfolgreich gebaut wurde
-- Überprüfen Sie die Logs: `docker logs <container-id>`
-- Starten Sie Home Assistant neu
+### Temperaturen
+- Vorlauf-/Rücklauftemperatur
+- Außentemperatur
+- Warmwassertemperatur
+- Kompressor-Temperaturen (Saugung, Druck, Kondensator, Verdampfer)
+- Zusätzliche Temperatursensoren (1-10)
 
-### Build-Fehler
-- Überprüfen Sie, ob Docker läuft: `docker info`
-- Stellen Sie sicher, dass alle Dateien vorhanden sind
-- Prüfen Sie die Berechtigungen: `chmod +x build-local.sh`
+### Leistung & Effizienz
+- Aktuelle Leistungsaufnahme
+- Berechnete Heizleistung
+- COP (Coefficient of Performance)
+- Gesamtenergieverbrauch
+- Kompressor-Frequenz
+
+### FSV-Parameter (Field Setting Values)
+- **FSV 10XX**: Fernbedienung (Temperaturlimits)
+- **FSV 20XX**: Wassergesetz (Heizkurven)
+- **FSV 30XX**: Warmwasser (DHW-Einstellungen)
+- **FSV 40XX**: Heizung (Zusatzheizung, Mischventil)
+- **FSV 50XX**: Sonstige (Smart Grid, PV-Steuerung)
+
+## 🏠 Dashboard-Vorlagen
+
+Das Addon enthält drei vorgefertigte Dashboard-Vorlagen:
+
+1. **Comprehensive Template**: Vollständige Übersicht mit allen verfügbaren Sensoren
+2. **Control Mode Template**: Fokus auf Steuerung und wichtige Parameter
+3. **Read-Only Template**: Nur-Lese-Ansicht für Monitoring
+
+Die Vorlagen finden Sie im `ressources/` Verzeichnis.
+
+## 🔒 Sicherheitshinweise
+
+⚠️ **WICHTIGE WARNUNG**: 
+
+Die Funktionen "Steuerung erlauben" und "Polling aktiviert" greifen aktiv in die Kommunikation der Samsung EHS ein. Dies bedeutet:
+
+- Das Addon sendet Befehle an die Wärmepumpe
+- Mögliche Beeinflussung des normalen Betriebs
+- **Nutzung erfolgt ausschließlich auf eigene Gefahr**
+- **Keine Haftung für eventuelle Schäden**
+
+Für reine Überwachung lassen Sie beide Optionen deaktiviert.
+
+## 🛠️ Fehlerbehebung
 
 ### Verbindungsprobleme
-- Überprüfen Sie die IP-Adresse und den Port des RS485-Adapters
-- Testen Sie die Verbindung: `ping <ip-adresse>`
-- Prüfen Sie die seriellen Geräte: `ls -la /dev/ttyUSB*`
+```bash
+# TCP-Verbindung testen
+ping <ip-adresse>
+telnet <ip-adresse> <port>
 
-## Unterstützte Hardware
+# Serielle Verbindung prüfen
+ls -la /dev/ttyUSB*
+```
 
-- Samsung EHS Mono HQ Quiet
-- Andere Samsung EHS Modelle (möglicherweise kompatibel)
-- RS485-zu-Ethernet Adapter oder USB-RS485 Adapter
+### Logs überprüfen
+```bash
+# Addon-Logs in Home Assistant
+Einstellungen → Add-ons → EHS-Sentinel → Logs
 
-## Support
+# Detaillierte Logs aktivieren
+log_level: "DEBUG"
+```
 
-Bei Problemen oder Fragen erstellen Sie bitte ein Issue im GitHub Repository.
+### Häufige Probleme
 
-## Lizenz
+1. **Keine Sensoren in Home Assistant**
+   - MQTT Auto-Discovery aktiviert?
+   - MQTT Broker erreichbar?
+   - Addon-Logs auf Fehler prüfen
 
-MIT License - siehe LICENSE Datei für Details.
+2. **Verbindung zur Wärmepumpe fehlgeschlagen**
+   - IP-Adresse und Port korrekt?
+   - RS485-Adapter funktionsfähig?
+   - Verkabelung prüfen
+
+3. **Steuerung funktioniert nicht**
+   - `steuerung_erlauben: true` gesetzt?
+   - Entsprechende FSV-Parameter verfügbar?
+
+## 🔄 Updates
+
+Das Addon wird automatisch über das Home Assistant Add-on System aktualisiert. Für manuelle Updates:
+
+```bash
+cd EHS-Sentinel
+git pull
+./build-local.sh
+```
+
+## 🤝 Beitragen
+
+Beiträge sind willkommen! Bitte:
+
+1. Fork des Repositories erstellen
+2. Feature-Branch erstellen (`git checkout -b feature/AmazingFeature`)
+3. Änderungen committen (`git commit -m 'Add some AmazingFeature'`)
+4. Branch pushen (`git push origin feature/AmazingFeature`)
+5. Pull Request erstellen
+
+## 📄 Lizenz
+
+Dieses Projekt steht unter der MIT-Lizenz. Siehe [LICENSE](LICENSE) für Details.
+
+## 🙏 Danksagungen
+
+- Samsung für die EHS-Wärmepumpen-Technologie
+- Home Assistant Community
+- Alle Beitragenden und Tester
+
+## 📞 Support
+
+Bei Problemen oder Fragen:
+
+1. [GitHub Issues](https://github.com/dafreeze01/EHS-Sentinel/issues) erstellen
+2. Logs und Konfiguration beifügen
+3. Detaillierte Problembeschreibung
+
+---
+
+**Entwickelt mit ❤️ für die Home Assistant Community**

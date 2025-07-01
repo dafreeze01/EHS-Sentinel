@@ -1,5 +1,5 @@
 # Vollständiges NASA Repository für EHS-Sentinel
-# Basierend auf der originalen data/NasaRepository.yml mit allen verfügbaren Parametern
+# Basierend auf der originalen data/NasaRepository.yml mit vervollständigten Enum-Werten
 
 # ===== GRUNDLEGENDE STEUERUNG =====
 NASA_POWER:

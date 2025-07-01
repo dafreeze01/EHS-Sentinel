@@ -7,6 +7,7 @@ from EHSArguments import EHSArguments
 from EHSConfig import EHSConfig
 from EHSExceptions import MessageWarningException
 from MQTTClient import MQTTClient
+from SafeArithmetic import safe_eval_arithmetic
 
 from NASAMessage import NASAMessage
 from NASAPacket import NASAPacket
@@ -123,10 +124,10 @@ class MessageProcessor:
             
             #logger.info(f"{msgname} Structure: {rawvalue} type of {value}")
         else:
-            # Fix arithmetic replacement issue
+            # Sichere arithmetische Auswertung statt eval()
             if 'arithmetic' in self.config.NASA_REPO[msgname]:
                 arithmetic = self.config.NASA_REPO[msgname]['arithmetic']
-                # Only replace 'value' with 'packed_value', not 'packed_value' with 'packed_packed_value'
+                # Fix arithmetic replacement issue - nur 'value' ersetzen, nicht 'packed_value'
                 if 'packed_value' not in arithmetic:
                     arithmetic = arithmetic.replace("value", 'packed_value')
             else: 
@@ -136,7 +137,8 @@ class MessageProcessor:
 
             if len(arithmetic) > 0:
                 try:
-                    value = eval(arithmetic)
+                    # Verwende sichere arithmetische Auswertung
+                    value = safe_eval_arithmetic(arithmetic, packed_value=packed_value)
                 except Exception as e:
                     logger.warning(f"Arithmetic Function couldn't been applied for Message {msgname}, using raw value: arithmetic = {arithmetic} {e} {packed_value} {rawvalue}")
                     value = packed_value
