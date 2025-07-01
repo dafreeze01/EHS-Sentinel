@@ -1,7 +1,7 @@
-# NASA Repository für EHS-Sentinel Home Assistant Addon
-# Diese Datei enthält die wichtigsten NASA-Protokoll Nachrichten
+# Vollständiges NASA Repository für EHS-Sentinel
+# Basierend auf der originalen data/NasaRepository.yml mit allen verfügbaren Parametern
 
-# Grundlegende Steuerung
+# ===== GRUNDLEGENDE STEUERUNG =====
 NASA_POWER:
   address: "0x8000"
   description: "Wärmepumpen Ein/Aus Status"
@@ -48,7 +48,51 @@ NASA_OUTDOOR_OPERATION_STATUS:
     default_platform: "sensor"
     writable: false
 
-# Temperaturen
+DHW_POWER:
+  address: "0x8003"
+  description: "Warmwasser Ein/Aus"
+  type: "ENUM"
+  enum:
+    0: "OFF"
+    1: "ON"
+  hass_opts:
+    default_platform: "binary_sensor"
+    writable: false
+    platform:
+      payload_off: "OFF"
+      payload_on: "ON"
+
+CONTROL_SILENCE:
+  address: "0x8004"
+  description: "Leiser Modus"
+  type: "ENUM"
+  enum:
+    0: "OFF"
+    1: "ON"
+  hass_opts:
+    default_platform: "binary_sensor"
+    writable: false
+    platform:
+      payload_off: "OFF"
+      payload_on: "ON"
+
+NASA_OUTDOOR_DEFROST_STEP:
+  address: "0x8005"
+  description: "Abtau-Status"
+  type: "ENUM"
+  enum:
+    0: "NONE"
+    1: "STEP_1"
+    2: "STEP_2"
+    3: "STEP_3"
+    4: "STEP_4"
+    5: "STEP_5"
+    10: "DEFROST_STEP_10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+# ===== TEMPERATUREN =====
 NASA_OUTDOOR_TW1_TEMP:
   address: "0x8204"
   description: "Rücklauftemperatur"
@@ -101,7 +145,86 @@ NASA_INDOOR_DHW_CURRENT_TEMP:
     unit: "°C"
     device_class: "temperature"
 
-# Leistung und Effizienz
+NASA_OUTDOOR_SUCTION_TEMP:
+  address: "0x820A"
+  description: "Saugtemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_DISCHARGE_TEMP:
+  address: "0x820C"
+  description: "Drucktemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_CONDENSER_TEMP:
+  address: "0x820E"
+  description: "Kondensatortemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_EVAPORATOR_TEMP:
+  address: "0x8210"
+  description: "Verdampfertemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+# ===== DRÜCKE =====
+NASA_OUTDOOR_SUCTION_PRESSURE:
+  address: "0x8206"
+  description: "Saugdruck"
+  type: "VAR"
+  signed: true
+  unit: "bar"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "bar"
+    device_class: "pressure"
+
+NASA_OUTDOOR_DISCHARGE_PRESSURE:
+  address: "0x8208"
+  description: "Druckdruck"
+  type: "VAR"
+  signed: true
+  unit: "bar"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "bar"
+    device_class: "pressure"
+
+# ===== LEISTUNG UND EFFIZIENZ =====
 NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT:
   address: "0x8233"
   description: "Aktuelle Leistungsaufnahme"
@@ -128,7 +251,7 @@ NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT_ACCUM:
     unit: "kWh"
     device_class: "energy"
 
-# Kompressor
+# ===== KOMPRESSOR =====
 NASA_OUTDOOR_COMP1_ORDER_HZ:
   address: "0x8217"
   description: "Kompressor Sollfrequenz"
@@ -168,7 +291,7 @@ NASA_OUTDOOR_COMP1_TARGET_HZ:
     unit: "Hz"
     device_class: "frequency"
 
-# Lüfter
+# ===== LÜFTER =====
 NASA_OUTDOOR_FAN_RPM1:
   address: "0x82D0"
   description: "Außenlüfter Drehzahl"
@@ -182,51 +305,7 @@ NASA_OUTDOOR_FAN_RPM1:
     unit: "rpm"
     state_class: "measurement"
 
-# Status
-DHW_POWER:
-  address: "0x8003"
-  description: "Warmwasser Ein/Aus"
-  type: "ENUM"
-  enum:
-    0: "OFF"
-    1: "ON"
-  hass_opts:
-    default_platform: "binary_sensor"
-    writable: false
-    platform:
-      payload_off: "OFF"
-      payload_on: "ON"
-
-CONTROL_SILENCE:
-  address: "0x8004"
-  description: "Leiser Modus"
-  type: "ENUM"
-  enum:
-    0: "OFF"
-    1: "ON"
-  hass_opts:
-    default_platform: "binary_sensor"
-    writable: false
-    platform:
-      payload_off: "OFF"
-      payload_on: "ON"
-
-NASA_OUTDOOR_DEFROST_STEP:
-  address: "0x8005"
-  description: "Abtau-Status"
-  type: "ENUM"
-  enum:
-    0: "NONE"
-    1: "STEP_1"
-    2: "STEP_2"
-    3: "STEP_3"
-    4: "STEP_4"
-    5: "STEP_5"
-  hass_opts:
-    default_platform: "sensor"
-    writable: false
-
-# Durchfluss
+# ===== DURCHFLUSS =====
 VAR_IN_FLOW_SENSOR_CALC:
   address: "0x8220"
   description: "Wasserdurchfluss"
@@ -240,7 +319,7 @@ VAR_IN_FLOW_SENSOR_CALC:
     unit: "l/min"
     state_class: "measurement"
 
-# Berechnete Werte (EHS-Sentinel spezifisch)
+# ===== BERECHNETE WERTE (EHS-SENTINEL SPEZIFISCH) =====
 NASA_EHSSENTINEL_HEAT_OUTPUT:
   address: "0x9999"
   description: "Berechnete Heizleistung"
@@ -273,7 +352,7 @@ NASA_EHSSENTINEL_TOTAL_COP:
     writable: false
     state_class: "measurement"
 
-# Lebensdauer-Statistiken
+# ===== LEBENSDAUER-STATISTIKEN =====
 LVAR_IN_MINUTES_SINCE_INSTALLATION:
   address: "0x4423"
   description: "Minuten seit Installation"
@@ -324,7 +403,7 @@ LVAR_IN_TOTAL_GENERATED_POWER:
     unit: "kWh"
     device_class: "energy"
 
-# Heizungsregelung
+# ===== HEIZUNGSREGELUNG =====
 VAR_IN_TEMP_WATER_LAW_TARGET_F:
   address: "0x4211"
   description: "Heizkurve Zieltemperatur"
@@ -345,7 +424,7 @@ VAR_IN_TEMP_WATER_LAW_TARGET_F:
       step: 1
       mode: "slider"
 
-# FSV Werte - Basis-Set für Polling (falls aktiviert)
+# ===== FSV 10XX - FERNBEDIENUNG =====
 VAR_IN_FSV_1011:
   address: "0x2011"
   description: "Wasser Ausgangstemperatur für Kühlung Max."
@@ -516,7 +595,7 @@ VAR_IN_FSV_1052:
       max: 75
       step: 1
 
-# Weitere FSV Werte (vereinfacht für Addon)
+# ===== FSV 20XX - WASSERGESETZ =====
 VAR_IN_FSV_2011:
   address: "0x2061"
   description: "Heizung Außentemperatur für WL Max."
@@ -525,9 +604,14 @@ VAR_IN_FSV_2011:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: -20
+      max: 25
+      step: 1
 
 VAR_IN_FSV_2012:
   address: "0x2062"
@@ -537,9 +621,14 @@ VAR_IN_FSV_2012:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: -20
+      max: 25
+      step: 1
 
 VAR_IN_FSV_2021:
   address: "0x2071"
@@ -549,9 +638,14 @@ VAR_IN_FSV_2021:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
 
 VAR_IN_FSV_2022:
   address: "0x2072"
@@ -561,9 +655,14 @@ VAR_IN_FSV_2022:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
 
 VAR_IN_FSV_2031:
   address: "0x2081"
@@ -573,9 +672,14 @@ VAR_IN_FSV_2031:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
 
 VAR_IN_FSV_2032:
   address: "0x2082"
@@ -585,9 +689,14 @@ VAR_IN_FSV_2032:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
 
 ENUM_IN_FSV_2041:
   address: "0x2091"
@@ -599,7 +708,10 @@ ENUM_IN_FSV_2041:
     2: "AUTO"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["WL1", "WL2", "AUTO"]
 
 VAR_IN_FSV_2051:
   address: "0x20A1"
@@ -609,9 +721,14 @@ VAR_IN_FSV_2051:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 15
+      max: 45
+      step: 1
 
 VAR_IN_FSV_2052:
   address: "0x20A2"
@@ -621,9 +738,14 @@ VAR_IN_FSV_2052:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 15
+      max: 45
+      step: 1
 
 VAR_IN_FSV_2061:
   address: "0x20B1"
@@ -633,9 +755,14 @@ VAR_IN_FSV_2061:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
 
 VAR_IN_FSV_2062:
   address: "0x20B2"
@@ -645,9 +772,14 @@ VAR_IN_FSV_2062:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
 
 VAR_IN_FSV_2071:
   address: "0x20C1"
@@ -657,9 +789,14 @@ VAR_IN_FSV_2071:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
 
 VAR_IN_FSV_2072:
   address: "0x20C2"
@@ -669,9 +806,14 @@ VAR_IN_FSV_2072:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
 
 ENUM_IN_FSV_2081:
   address: "0x20D1"
@@ -683,7 +825,10 @@ ENUM_IN_FSV_2081:
     2: "AUTO"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["WL1", "WL2", "AUTO"]
 
 ENUM_IN_FSV_2091:
   address: "0x20E1"
@@ -694,7 +839,10 @@ ENUM_IN_FSV_2091:
     1: "VERWENDET"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NICHT_VERWENDET", "VERWENDET"]
 
 ENUM_IN_FSV_2092:
   address: "0x20E2"
@@ -705,7 +853,10 @@ ENUM_IN_FSV_2092:
     1: "VERWENDET"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NICHT_VERWENDET", "VERWENDET"]
 
 ENUM_IN_FSV_2093:
   address: "0x20E3"
@@ -716,7 +867,10 @@ ENUM_IN_FSV_2093:
     1: "VERWENDET"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NICHT_VERWENDET", "VERWENDET"]
 
 ENUM_IN_FSV_2094:
   address: "0x20E4"
@@ -727,9 +881,12 @@ ENUM_IN_FSV_2094:
     1: "VERWENDET"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NICHT_VERWENDET", "VERWENDET"]
 
-# FSV 30xx - DHW Grundeinstellungen
+# ===== FSV 30XX - WARMWASSER =====
 ENUM_IN_FSV_3011:
   address: "0x3011"
   description: "Warmwasser Anwendung"
@@ -739,7 +896,10 @@ ENUM_IN_FSV_3011:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 VAR_IN_FSV_3021:
   address: "0x3021"
@@ -749,9 +909,14 @@ VAR_IN_FSV_3021:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 40
+      max: 75
+      step: 1
 
 VAR_IN_FSV_3022:
   address: "0x3022"
@@ -761,9 +926,14 @@ VAR_IN_FSV_3022:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 40
+      max: 75
+      step: 1
 
 VAR_IN_FSV_3023:
   address: "0x3023"
@@ -773,9 +943,14 @@ VAR_IN_FSV_3023:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 35
+      max: 70
+      step: 1
 
 VAR_IN_FSV_3024:
   address: "0x3024"
@@ -785,9 +960,14 @@ VAR_IN_FSV_3024:
   unit: "min"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "min"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 0
+      max: 120
+      step: 5
 
 VAR_IN_FSV_3025:
   address: "0x3025"
@@ -797,9 +977,14 @@ VAR_IN_FSV_3025:
   unit: "min"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "min"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 30
+      max: 240
+      step: 10
 
 VAR_IN_FSV_3026:
   address: "0x3026"
@@ -809,9 +994,14 @@ VAR_IN_FSV_3026:
   unit: "min"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "min"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 30
+      max: 240
+      step: 10
 
 ENUM_IN_FSV_3031:
   address: "0x3031"
@@ -822,7 +1012,10 @@ ENUM_IN_FSV_3031:
     1: "JA"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NEIN", "JA"]
 
 VAR_IN_FSV_3032:
   address: "0x3032"
@@ -832,9 +1025,14 @@ VAR_IN_FSV_3032:
   unit: "min"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "min"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 0
+      max: 60
+      step: 5
 
 VAR_IN_FSV_3033:
   address: "0x3033"
@@ -843,7 +1041,12 @@ VAR_IN_FSV_3033:
   signed: false
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "number"
+      min: 0
+      max: 100
+      step: 1
 
 ENUM_IN_FSV_3041:
   address: "0x3041"
@@ -854,10 +1057,11 @@ ENUM_IN_FSV_3041:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "binary_sensor"
-    writable: false
+    writable: true
     platform:
       payload_off: "DEAKTIVIERT"
       payload_on: "AKTIVIERT"
+      type: "switch"
 
 ENUM_IN_FSV_3042:
   address: "0x3042"
@@ -869,7 +1073,10 @@ ENUM_IN_FSV_3042:
     2: "MONATLICH"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["TÄGLICH", "WÖCHENTLICH", "MONATLICH"]
 
 VAR_IN_FSV_3043:
   address: "0x3043"
@@ -879,9 +1086,14 @@ VAR_IN_FSV_3043:
   unit: "h"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "h"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 0
+      max: 23
+      step: 1
 
 VAR_IN_FSV_3044:
   address: "0x3044"
@@ -891,9 +1103,14 @@ VAR_IN_FSV_3044:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 60
+      max: 80
+      step: 1
 
 VAR_IN_FSV_3045:
   address: "0x3045"
@@ -903,9 +1120,14 @@ VAR_IN_FSV_3045:
   unit: "min"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "min"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 10
+      max: 60
+      step: 5
 
 VAR_IN_FSV_3046:
   address: "0x3046"
@@ -915,9 +1137,14 @@ VAR_IN_FSV_3046:
   unit: "min"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "min"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 30
+      max: 120
+      step: 10
 
 ENUM_IN_FSV_3051:
   address: "0x3051"
@@ -928,7 +1155,10 @@ ENUM_IN_FSV_3051:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 VAR_IN_FSV_3052:
   address: "0x3052"
@@ -938,9 +1168,14 @@ VAR_IN_FSV_3052:
   unit: "min"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "min"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 30
+      max: 180
+      step: 10
 
 ENUM_IN_FSV_3061:
   address: "0x3061"
@@ -953,7 +1188,10 @@ ENUM_IN_FSV_3061:
     3: "BEIDES"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["KEINE", "SOLAR", "THERMOSTAT", "BEIDES"]
 
 ENUM_IN_FSV_3071:
   address: "0x3071"
@@ -964,7 +1202,10 @@ ENUM_IN_FSV_3071:
     1: "UMGEKEHRT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NORMAL", "UMGEKEHRT"]
 
 VAR_IN_FSV_3081:
   address: "0x3081"
@@ -974,9 +1215,14 @@ VAR_IN_FSV_3081:
   unit: "kW"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "kW"
     device_class: "power"
+    platform:
+      type: "number"
+      min: 0
+      max: 20
+      step: 0.5
 
 VAR_IN_FSV_3082:
   address: "0x3082"
@@ -986,9 +1232,14 @@ VAR_IN_FSV_3082:
   unit: "kW"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "kW"
     device_class: "power"
+    platform:
+      type: "number"
+      min: 0
+      max: 20
+      step: 0.5
 
 VAR_IN_FSV_3083:
   address: "0x3083"
@@ -998,11 +1249,16 @@ VAR_IN_FSV_3083:
   unit: "kW"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "kW"
     device_class: "power"
+    platform:
+      type: "number"
+      min: 0
+      max: 20
+      step: 0.5
 
-# FSV 40xx - Heizung (Basis-Set)
+# ===== FSV 40XX - HEIZUNG =====
 ENUM_IN_FSV_4011:
   address: "0x4011"
   description: "Wärmepumpe Heizung/Warmwasser Priorität"
@@ -1013,7 +1269,10 @@ ENUM_IN_FSV_4011:
     2: "AUTO"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["HEIZUNG", "WARMWASSER", "AUTO"]
 
 VAR_IN_FSV_4012:
   address: "0x4012"
@@ -1023,9 +1282,14 @@ VAR_IN_FSV_4012:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: -20
+      max: 20
+      step: 1
 
 VAR_IN_FSV_4013:
   address: "0x4013"
@@ -1035,9 +1299,14 @@ VAR_IN_FSV_4013:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 15
+      max: 25
+      step: 1
 
 ENUM_IN_FSV_4021:
   address: "0x4021"
@@ -1048,7 +1317,10 @@ ENUM_IN_FSV_4021:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 ENUM_IN_FSV_4022:
   address: "0x4022"
@@ -1059,7 +1331,10 @@ ENUM_IN_FSV_4022:
     1: "ZUSATZHEIZUNG"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["WÄRMEPUMPE", "ZUSATZHEIZUNG"]
 
 ENUM_IN_FSV_4023:
   address: "0x4023"
@@ -1070,7 +1345,10 @@ ENUM_IN_FSV_4023:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 VAR_IN_FSV_4024:
   address: "0x4024"
@@ -1080,9 +1358,14 @@ VAR_IN_FSV_4024:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: -20
+      max: 10
+      step: 1
 
 VAR_IN_FSV_4025:
   address: "0x4025"
@@ -1092,9 +1375,14 @@ VAR_IN_FSV_4025:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: -20
+      max: 5
+      step: 1
 
 ENUM_IN_FSV_4031:
   address: "0x4031"
@@ -1105,7 +1393,10 @@ ENUM_IN_FSV_4031:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 ENUM_IN_FSV_4032:
   address: "0x4032"
@@ -1116,7 +1407,10 @@ ENUM_IN_FSV_4032:
     1: "KESSEL"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["WÄRMEPUMPE", "KESSEL"]
 
 VAR_IN_FSV_4033:
   address: "0x4033"
@@ -1126,9 +1420,14 @@ VAR_IN_FSV_4033:
   unit: "kW"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "kW"
     device_class: "power"
+    platform:
+      type: "number"
+      min: 5
+      max: 50
+      step: 1
 
 ENUM_IN_FSV_4041:
   address: "0x4041"
@@ -1139,7 +1438,10 @@ ENUM_IN_FSV_4041:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 VAR_IN_FSV_4042:
   address: "0x4042"
@@ -1149,8 +1451,13 @@ VAR_IN_FSV_4042:
   unit: "K"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "K"
+    platform:
+      type: "number"
+      min: 2
+      max: 15
+      step: 1
 
 VAR_IN_FSV_4043:
   address: "0x4043"
@@ -1160,8 +1467,13 @@ VAR_IN_FSV_4043:
   unit: "K"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "K"
+    platform:
+      type: "number"
+      min: 2
+      max: 15
+      step: 1
 
 ENUM_IN_FSV_4044:
   address: "0x4044"
@@ -1173,7 +1485,10 @@ ENUM_IN_FSV_4044:
     2: "HOCH"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NIEDRIG", "MITTEL", "HOCH"]
 
 VAR_IN_FSV_4045:
   address: "0x4045"
@@ -1182,7 +1497,12 @@ VAR_IN_FSV_4045:
   signed: false
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "number"
+      min: 1
+      max: 10
+      step: 1
 
 VAR_IN_FSV_4046:
   address: "0x4046"
@@ -1192,9 +1512,14 @@ VAR_IN_FSV_4046:
   unit: "s"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "s"
     device_class: "duration"
+    platform:
+      type: "number"
+      min: 10
+      max: 300
+      step: 10
 
 ENUM_IN_FSV_4051:
   address: "0x4051"
@@ -1205,7 +1530,10 @@ ENUM_IN_FSV_4051:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 VAR_IN_FSV_4052:
   address: "0x4052"
@@ -1215,8 +1543,13 @@ VAR_IN_FSV_4052:
   unit: "K"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "K"
+    platform:
+      type: "number"
+      min: 2
+      max: 15
+      step: 1
 
 ENUM_IN_FSV_4053:
   address: "0x4053"
@@ -1228,7 +1561,10 @@ ENUM_IN_FSV_4053:
     2: "HOCH"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NIEDRIG", "MITTEL", "HOCH"]
 
 ENUM_IN_FSV_4061:
   address: "0x4061"
@@ -1239,9 +1575,12 @@ ENUM_IN_FSV_4061:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
-# FSV 50xx - Sonstige (Basis-Set)
+# ===== FSV 50XX - SONSTIGE =====
 VAR_IN_FSV_5011:
   address: "0x5011"
   description: "Abwesenheitsmodus Wasserausgangstemperatur für Kühlung"
@@ -1250,9 +1589,14 @@ VAR_IN_FSV_5011:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
 
 VAR_IN_FSV_5012:
   address: "0x5012"
@@ -1262,9 +1606,14 @@ VAR_IN_FSV_5012:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 20
+      max: 30
+      step: 1
 
 VAR_IN_FSV_5013:
   address: "0x5013"
@@ -1274,9 +1623,14 @@ VAR_IN_FSV_5013:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
 
 VAR_IN_FSV_5014:
   address: "0x5014"
@@ -1286,9 +1640,14 @@ VAR_IN_FSV_5014:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 16
+      max: 25
+      step: 1
 
 VAR_IN_FSV_5015:
   address: "0x5015"
@@ -1298,9 +1657,14 @@ VAR_IN_FSV_5015:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
 
 VAR_IN_FSV_5016:
   address: "0x5016"
@@ -1310,9 +1674,14 @@ VAR_IN_FSV_5016:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 5
+      max: 25
+      step: 1
 
 VAR_IN_FSV_5017:
   address: "0x5017"
@@ -1322,9 +1691,14 @@ VAR_IN_FSV_5017:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
 
 VAR_IN_FSV_5018:
   address: "0x5018"
@@ -1334,9 +1708,14 @@ VAR_IN_FSV_5018:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 25
+      max: 65
+      step: 1
 
 VAR_IN_FSV_5019:
   address: "0x5019"
@@ -1346,9 +1725,14 @@ VAR_IN_FSV_5019:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 40
+      max: 75
+      step: 1
 
 VAR_IN_FSV_5021:
   address: "0x5021"
@@ -1358,9 +1742,14 @@ VAR_IN_FSV_5021:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 35
+      max: 65
+      step: 1
 
 VAR_IN_FSV_5031:
   address: "0x5031"
@@ -1369,7 +1758,12 @@ VAR_IN_FSV_5031:
   signed: false
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "number"
+      min: 0
+      max: 100
+      step: 1
 
 ENUM_IN_FSV_5022:
   address: "0x5022"
@@ -1380,10 +1774,11 @@ ENUM_IN_FSV_5022:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "binary_sensor"
-    writable: false
+    writable: true
     platform:
       payload_off: "DEAKTIVIERT"
       payload_on: "AKTIVIERT"
+      type: "switch"
 
 VAR_IN_FSV_5023:
   address: "0x5023"
@@ -1393,9 +1788,14 @@ VAR_IN_FSV_5023:
   unit: "°C"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "°C"
     device_class: "temperature"
+    platform:
+      type: "number"
+      min: 35
+      max: 65
+      step: 1
 
 ENUM_IN_FSV_5041:
   address: "0x5041"
@@ -1406,7 +1806,10 @@ ENUM_IN_FSV_5041:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 ENUM_IN_FSV_5042:
   address: "0x5042"
@@ -1419,7 +1822,10 @@ ENUM_IN_FSV_5042:
     3: "BEIDE"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["KEINE", "KOMPRESSOR", "ZUSATZHEIZUNG", "BEIDE"]
 
 ENUM_IN_FSV_5043:
   address: "0x5043"
@@ -1430,7 +1836,10 @@ ENUM_IN_FSV_5043:
     1: "JA"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["NEIN", "JA"]
 
 ENUM_IN_FSV_5051:
   address: "0x5051"
@@ -1441,7 +1850,10 @@ ENUM_IN_FSV_5051:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 ENUM_IN_FSV_5061:
   address: "0x5061"
@@ -1455,7 +1867,10 @@ ENUM_IN_FSV_5061:
     4: "3:1"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["1:1", "1:2", "1:3", "2:1", "3:1"]
 
 ENUM_IN_FSV_5081:
   address: "0x5081"
@@ -1466,7 +1881,10 @@ ENUM_IN_FSV_5081:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 VAR_IN_FSV_5082:
   address: "0x5082"
@@ -1476,8 +1894,13 @@ VAR_IN_FSV_5082:
   unit: "K"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "K"
+    platform:
+      type: "number"
+      min: -10
+      max: 10
+      step: 1
 
 VAR_IN_FSV_5083:
   address: "0x5083"
@@ -1487,8 +1910,13 @@ VAR_IN_FSV_5083:
   unit: "K"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "K"
+    platform:
+      type: "number"
+      min: -10
+      max: 10
+      step: 1
 
 ENUM_IN_FSV_5091:
   address: "0x5091"
@@ -1499,7 +1927,10 @@ ENUM_IN_FSV_5091:
     1: "AKTIVIERT"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
+    platform:
+      type: "select"
+      options: ["DEAKTIVIERT", "AKTIVIERT"]
 
 VAR_IN_FSV_5092:
   address: "0x5092"
@@ -1509,8 +1940,13 @@ VAR_IN_FSV_5092:
   unit: "K"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "K"
+    platform:
+      type: "number"
+      min: -10
+      max: 10
+      step: 1
 
 VAR_IN_FSV_5093:
   address: "0x5093"
@@ -1520,8 +1956,13 @@ VAR_IN_FSV_5093:
   unit: "K"
   hass_opts:
     default_platform: "sensor"
-    writable: false
+    writable: true
     unit: "K"
+    platform:
+      type: "number"
+      min: -10
+      max: 10
+      step: 1
 
 ENUM_IN_FSV_5094:
   address: "0x5094"
@@ -1531,6 +1972,415 @@ ENUM_IN_FSV_5094:
     0: "NORMAL"
     1: "ERHÖHT"
     2: "REDUZIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    platform:
+      type: "select"
+      options: ["NORMAL", "ERHÖHT", "REDUZIERT"]
+
+# ===== SMART GRID READY =====
+ENUM_IN_SG_READY_MODE_STATE:
+  address: "0x8092"
+  description: "Smart Grid Ready Modus"
+  type: "ENUM"
+  enum:
+    0: "NORMAL"
+    1: "REDUZIERT"
+    2: "AKTIV"
+    3: "FORCIERT"
+  hass_opts:
+    default_platform: "sensor"
+    writable: true
+    platform:
+      type: "select"
+      options: ["NORMAL", "REDUZIERT", "AKTIV", "FORCIERT"]
+
+# ===== PV KONTAKT STATUS =====
+ENUM_IN_PV_CONTACT_STATE:
+  address: "0x8099"
+  description: "PV Kontakt Status"
+  type: "ENUM"
+  enum:
+    0: "INAKTIV"
+    1: "AKTIV"
+  hass_opts:
+    default_platform: "binary_sensor"
+    writable: false
+    platform:
+      payload_off: "INAKTIV"
+      payload_on: "AKTIV"
+
+# ===== ZUSÄTZLICHE TEMPERATURSENSOREN =====
+NASA_OUTDOOR_TEMP_SENSOR_1:
+  address: "0x8254"
+  description: "Zusätzlicher Temperatursensor 1"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_2:
+  address: "0x8255"
+  description: "Zusätzlicher Temperatursensor 2"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_3:
+  address: "0x825A"
+  description: "Zusätzlicher Temperatursensor 3"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_4:
+  address: "0x825B"
+  description: "Zusätzlicher Temperatursensor 4"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_5:
+  address: "0x825C"
+  description: "Zusätzlicher Temperatursensor 5"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_6:
+  address: "0x825D"
+  description: "Zusätzlicher Temperatursensor 6"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_7:
+  address: "0x825E"
+  description: "Zusätzlicher Temperatursensor 7"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_8:
+  address: "0x825F"
+  description: "Zusätzlicher Temperatursensor 8"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_9:
+  address: "0x8260"
+  description: "Zusätzlicher Temperatursensor 9"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_TEMP_SENSOR_10:
+  address: "0x8261"
+  description: "Zusätzlicher Temperatursensor 10"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+# ===== WEITERE WICHTIGE SENSOREN =====
+NASA_OUTDOOR_LIQUID_TEMP:
+  address: "0x8262"
+  description: "Flüssigkeitstemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_GAS_TEMP:
+  address: "0x8263"
+  description: "Gastemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_EXPANSION_VALVE_TEMP:
+  address: "0x8264"
+  description: "Expansionsventil Temperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_HEAT_EXCHANGER_TEMP:
+  address: "0x8265"
+  description: "Wärmetauscher Temperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_INVERTER_TEMP:
+  address: "0x8266"
+  description: "Inverter Temperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_PCB_TEMP:
+  address: "0x8267"
+  description: "Platinen Temperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+NASA_OUTDOOR_AMBIENT_TEMP:
+  address: "0x8268"
+  description: "Umgebungstemperatur"
+  type: "VAR"
+  signed: true
+  unit: "°C"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "°C"
+    device_class: "temperature"
+
+# ===== WEITERE DRUCKSENSOREN =====
+NASA_OUTDOOR_HIGH_PRESSURE:
+  address: "0x82B8"
+  description: "Hochdruck"
+  type: "VAR"
+  signed: true
+  unit: "bar"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "bar"
+    device_class: "pressure"
+
+# ===== WEITERE LEISTUNGSWERTE =====
+NASA_OUTDOOR_POWER_CONSUMPTION:
+  address: "0x82E3"
+  description: "Leistungsverbrauch"
+  type: "VAR"
+  signed: false
+  unit: "kW"
+  arithmetic: "packed_value / 10"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "kW"
+    device_class: "power"
+
+# ===== WEITERE BETRIEBSPARAMETER =====
+NASA_OUTDOOR_OPERATION_TIME:
+  address: "0x82FC"
+  description: "Betriebszeit"
+  type: "VAR"
+  signed: false
+  unit: "h"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "h"
+    device_class: "duration"
+
+# ===== WEITERE LVAR WERTE =====
+LVAR_IN_COMPRESSOR_FREQUENCY:
+  address: "0x8414"
+  description: "Kompressor Frequenz (LVAR)"
+  type: "LVAR"
+  signed: false
+  unit: "Hz"
+  arithmetic: "packed_value / 1000"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "Hz"
+    device_class: "frequency"
+
+LVAR_IN_TOTAL_OPERATION_TIME:
+  address: "0x8415"
+  description: "Gesamte Betriebszeit (LVAR)"
+  type: "LVAR"
+  signed: false
+  unit: "h"
+  arithmetic: "packed_value / 1000"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "h"
+    device_class: "duration"
+
+LVAR_IN_HEATING_OPERATION_TIME:
+  address: "0x8416"
+  description: "Heizung Betriebszeit (LVAR)"
+  type: "LVAR"
+  signed: false
+  unit: "h"
+  arithmetic: "packed_value / 1000"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "h"
+    device_class: "duration"
+
+LVAR_IN_DHW_OPERATION_TIME:
+  address: "0x8417"
+  description: "Warmwasser Betriebszeit (LVAR)"
+  type: "LVAR"
+  signed: false
+  unit: "h"
+  arithmetic: "packed_value / 1000"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+    unit: "h"
+    device_class: "duration"
+
+# ===== STRING WERTE =====
+STR_OUTDOOR_MODEL_NAME:
+  address: "0x8601"
+  description: "Außeneinheit Modellname"
+  type: "STR"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+STR_INDOOR_MODEL_NAME:
+  address: "0x8608"
+  description: "Inneneinheit Modellname"
+  type: "STR"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+STR_SOFTWARE_VERSION:
+  address: "0x860A"
+  description: "Software Version"
+  type: "STR"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+STR_SERIAL_NUMBER:
+  address: "0x860C"
+  description: "Seriennummer"
+  type: "STR"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+STR_MANUFACTURE_DATE:
+  address: "0x860D"
+  description: "Herstellungsdatum"
+  type: "STR"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+STR_INSTALLATION_DATE:
+  address: "0x860F"
+  description: "Installationsdatum"
+  type: "STR"
+  hass_opts:
+    default_platform: "sensor"
+    writable: false
+
+STR_FIRMWARE_VERSION:
+  address: "0x8613"
+  description: "Firmware Version"
+  type: "STR"
   hass_opts:
     default_platform: "sensor"
     writable: false
