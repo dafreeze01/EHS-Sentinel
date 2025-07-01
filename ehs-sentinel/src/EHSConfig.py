@@ -56,49 +56,63 @@ class EHSConfig():
         config = {
             'general': {
                 'nasaRepositoryFile': '/app/data/NasaRepository.yml',
-                'allowControl': addon_config.get('allgemein', {}).get('steuerung_erlauben', False)
+                'allowControl': addon_config.get('steuerung_erlauben', False)
             },
             'mqtt': {
-                'broker-url': addon_config.get('mqtt', {}).get('broker_url', 'core-mosquitto'),
-                'broker-port': addon_config.get('mqtt', {}).get('broker_port', 1883),
-                'client-id': addon_config.get('mqtt', {}).get('client_id', 'ehs-sentinel'),
-                'topicPrefix': addon_config.get('mqtt', {}).get('topic_prefix', 'ehsSentinel'),
-                'homeAssistantAutoDiscoverTopic': 'homeassistant' if addon_config.get('mqtt', {}).get('homeassistant_discovery', True) else '',
-                'useCamelCaseTopicNames': addon_config.get('mqtt', {}).get('camel_case_topics', True)
+                'broker-url': addon_config.get('mqtt_broker_url', 'core-mosquitto'),
+                'broker-port': addon_config.get('mqtt_broker_port', 1883),
+                'client-id': addon_config.get('mqtt_client_id', 'ehs-sentinel'),
+                'topicPrefix': addon_config.get('mqtt_topic_prefix', 'ehsSentinel'),
+                'homeAssistantAutoDiscoverTopic': 'homeassistant' if addon_config.get('mqtt_homeassistant_discovery', True) else '',
+                'useCamelCaseTopicNames': addon_config.get('mqtt_camel_case_topics', True)
             },
-            'logging': addon_config.get('logging', {})
+            'logging': {
+                'deviceAdded': addon_config.get('log_geraet_hinzugefuegt', True),
+                'messageNotFound': addon_config.get('log_nachricht_nicht_gefunden', False),
+                'packetNotFromIndoorOutdoor': addon_config.get('log_paket_nicht_von_innen_aussen', False),
+                'proccessedMessage': addon_config.get('log_verarbeitete_nachricht', False),
+                'pollerMessage': addon_config.get('log_poller_nachricht', False),
+                'controlMessage': addon_config.get('log_steuerungs_nachricht', False),
+                'invalidPacket': addon_config.get('log_ungueltiges_paket', False)
+            }
         }
 
         # Add user/password if provided
-        mqtt_user = addon_config.get('mqtt', {}).get('benutzer', '')
-        mqtt_pass = addon_config.get('mqtt', {}).get('passwort', '')
+        mqtt_user = addon_config.get('mqtt_benutzer', '')
+        mqtt_pass = addon_config.get('mqtt_passwort', '')
         if mqtt_user:
             config['mqtt']['user'] = mqtt_user
         if mqtt_pass:
             config['mqtt']['password'] = mqtt_pass
 
         # Add protocol file if provided
-        protocol_file = addon_config.get('allgemein', {}).get('protokoll_datei', '')
+        protocol_file = addon_config.get('protokoll_datei', '')
         if protocol_file:
             config['general']['protocolFile'] = protocol_file
 
         # Connection configuration
-        connection_type = addon_config.get('verbindung', {}).get('typ', 'tcp')
+        connection_type = addon_config.get('verbindung_typ', 'tcp')
         if connection_type == 'tcp':
             config['tcp'] = {
-                'ip': addon_config.get('verbindung', {}).get('tcp', {}).get('ip', '192.168.1.100'),
-                'port': addon_config.get('verbindung', {}).get('tcp', {}).get('port', 4196)
+                'ip': addon_config.get('tcp_ip', '192.168.1.100'),
+                'port': addon_config.get('tcp_port', 4196)
             }
         else:
             config['serial'] = {
-                'device': addon_config.get('verbindung', {}).get('serial', {}).get('device', '/dev/ttyUSB0'),
-                'baudrate': addon_config.get('verbindung', {}).get('serial', {}).get('baudrate', 9600)
+                'device': addon_config.get('serial_device', '/dev/ttyUSB0'),
+                'baudrate': addon_config.get('serial_baudrate', 9600)
             }
 
         # Polling configuration
-        if addon_config.get('polling', {}).get('aktiviert', False):
+        if addon_config.get('polling_aktiviert', False):
             config['polling'] = {
-                'fetch_interval': [],
+                'fetch_interval': [
+                    {'name': 'fsv10xx', 'enable': True, 'schedule': '30m'},
+                    {'name': 'fsv20xx', 'enable': True, 'schedule': '30m'},
+                    {'name': 'fsv30xx', 'enable': True, 'schedule': '30m'},
+                    {'name': 'fsv40xx', 'enable': True, 'schedule': '30m'},
+                    {'name': 'fsv50xx', 'enable': True, 'schedule': '30m'}
+                ],
                 'groups': {
                     'fsv10xx': [
                         'VAR_IN_FSV_1011', 'VAR_IN_FSV_1012', 'VAR_IN_FSV_1021', 'VAR_IN_FSV_1022',
@@ -139,15 +153,6 @@ class EHSConfig():
                     ]
                 }
             }
-            
-            # Add enabled intervals from addon config
-            for interval in addon_config.get('polling', {}).get('intervalle', []):
-                if interval.get('aktiviert', False):
-                    config['polling']['fetch_interval'].append({
-                        'name': interval['name'],
-                        'enable': True,
-                        'schedule': interval['zeitplan']
-                    })
 
         # Save generated config to file for compatibility
         with open(self.args.CONFIGFILE, 'w') as f:

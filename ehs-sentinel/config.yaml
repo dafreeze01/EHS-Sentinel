@@ -12,87 +12,53 @@ arch:
 startup: application
 boot: auto
 options:
-  verbindung:
-    typ: "tcp"
-    tcp:
-      ip: "192.168.1.100"
-      port: 4196
-    serial:
-      device: "/dev/ttyUSB0"
-      baudrate: 9600
-  mqtt:
-    broker_url: "core-mosquitto"
-    broker_port: 1883
-    benutzer: ""
-    passwort: ""
-    client_id: "ehs-sentinel"
-    topic_prefix: "ehsSentinel"
-    homeassistant_discovery: true
-    camel_case_topics: true
-  allgemein:
-    steuerung_erlauben: false
-    protokoll_datei: ""
-  logging:
-    geraet_hinzugefuegt: true
-    nachricht_nicht_gefunden: false
-    paket_nicht_von_innen_aussen: false
-    verarbeitete_nachricht: false
-    poller_nachricht: false
-    steuerungs_nachricht: false
-    ungueltiges_paket: false
-  polling:
-    aktiviert: false
-    intervalle:
-      - name: "fsv10xx"
-        aktiviert: false
-        zeitplan: "30m"
-      - name: "fsv20xx"
-        aktiviert: false
-        zeitplan: "30m"
-      - name: "fsv30xx"
-        aktiviert: false
-        zeitplan: "30m"
-      - name: "fsv40xx"
-        aktiviert: false
-        zeitplan: "30m"
-      - name: "fsv50xx"
-        aktiviert: false
-        zeitplan: "30m"
+  verbindung_typ: "tcp"
+  tcp_ip: "192.168.1.100"
+  tcp_port: 4196
+  serial_device: "/dev/ttyUSB0"
+  serial_baudrate: 9600
+  mqtt_broker_url: "core-mosquitto"
+  mqtt_broker_port: 1883
+  mqtt_benutzer: ""
+  mqtt_passwort: ""
+  mqtt_client_id: "ehs-sentinel"
+  mqtt_topic_prefix: "ehsSentinel"
+  mqtt_homeassistant_discovery: true
+  mqtt_camel_case_topics: true
+  steuerung_erlauben: false
+  protokoll_datei: ""
+  log_geraet_hinzugefuegt: true
+  log_nachricht_nicht_gefunden: false
+  log_paket_nicht_von_innen_aussen: false
+  log_verarbeitete_nachricht: false
+  log_poller_nachricht: false
+  log_steuerungs_nachricht: false
+  log_ungueltiges_paket: false
+  polling_aktiviert: false
 schema:
-  verbindung:
-    typ: "list(tcp|serial)"
-    tcp:
-      ip: "str"
-      port: "port"
-    serial:
-      device: "str"
-      baudrate: "int"
-  mqtt:
-    broker_url: "str"
-    broker_port: "port"
-    benutzer: "str?"
-    passwort: "password?"
-    client_id: "str"
-    topic_prefix: "str"
-    homeassistant_discovery: "bool"
-    camel_case_topics: "bool"
-  allgemein:
-    steuerung_erlauben: "bool"
-    protokoll_datei: "str?"
-  logging:
-    geraet_hinzugefuegt: "bool"
-    nachricht_nicht_gefunden: "bool"
-    paket_nicht_von_innen_aussen: "bool"
-    verarbeitete_nachricht: "bool"
-    poller_nachricht: "bool"
-    steuerungs_nachricht: "bool"
-    ungueltiges_paket: "bool"
-  polling:
-    aktiviert: "bool"
-    intervalle:
-      - name: "str"
-        aktiviert: "bool"
-        zeitplan: "str"
+  verbindung_typ: "list(tcp|serial)"
+  tcp_ip: "str"
+  tcp_port: "port"
+  serial_device: "str"
+  serial_baudrate: "int"
+  mqtt_broker_url: "str"
+  mqtt_broker_port: "port"
+  mqtt_benutzer: "str?"
+  mqtt_passwort: "password?"
+  mqtt_client_id: "str"
+  mqtt_topic_prefix: "str"
+  mqtt_homeassistant_discovery: "bool"
+  mqtt_camel_case_topics: "bool"
+  steuerung_erlauben: "bool"
+  protokoll_datei: "str?"
+  log_geraet_hinzugefuegt: "bool"
+  log_nachricht_nicht_gefunden: "bool"
+  log_paket_nicht_von_innen_aussen: "bool"
+  log_verarbeitete_nachricht: "bool"
+  log_poller_nachricht: "bool"
+  log_steuerungs_nachricht: "bool"
+  log_ungueltiges_paket: "bool"
+  polling_aktiviert: "bool"
 ports:
   4196/tcp: 4196
 devices:

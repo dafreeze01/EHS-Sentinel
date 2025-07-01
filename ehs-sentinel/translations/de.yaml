@@ -2,84 +2,72 @@ configuration:
   verbindung:
     name: "Verbindung"
     description: "Konfiguration der Verbindung zur Wärmepumpe"
-  verbindung.typ:
+  verbindung_typ:
     name: "Verbindungstyp"
     description: "Wählen Sie zwischen TCP (RS485-zu-Ethernet) oder Serial (USB-RS485)"
-  verbindung.tcp.ip:
-    name: "IP-Adresse"
+  tcp_ip:
+    name: "TCP IP-Adresse"
     description: "IP-Adresse des RS485-zu-Ethernet Adapters"
-  verbindung.tcp.port:
-    name: "Port"
+  tcp_port:
+    name: "TCP Port"
     description: "Port des RS485-zu-Ethernet Adapters"
-  verbindung.serial.device:
-    name: "Gerätepfad"
+  serial_device:
+    name: "Serielles Gerät"
     description: "Pfad zum seriellen Gerät (z.B. /dev/ttyUSB0)"
-  verbindung.serial.baudrate:
+  serial_baudrate:
     name: "Baudrate"
     description: "Baudrate für die serielle Verbindung"
-  mqtt:
-    name: "MQTT"
-    description: "MQTT Broker Konfiguration"
-  mqtt.broker_url:
-    name: "Broker URL"
+  mqtt_broker_url:
+    name: "MQTT Broker URL"
     description: "URL oder IP-Adresse des MQTT Brokers"
-  mqtt.broker_port:
-    name: "Broker Port"
+  mqtt_broker_port:
+    name: "MQTT Broker Port"
     description: "Port des MQTT Brokers"
-  mqtt.benutzer:
-    name: "Benutzername"
+  mqtt_benutzer:
+    name: "MQTT Benutzername"
     description: "MQTT Benutzername (optional)"
-  mqtt.passwort:
-    name: "Passwort"
+  mqtt_passwort:
+    name: "MQTT Passwort"
     description: "MQTT Passwort (optional)"
-  mqtt.client_id:
-    name: "Client ID"
+  mqtt_client_id:
+    name: "MQTT Client ID"
     description: "MQTT Client ID"
-  mqtt.topic_prefix:
-    name: "Topic Präfix"
+  mqtt_topic_prefix:
+    name: "MQTT Topic Präfix"
     description: "Präfix für MQTT Topics"
-  mqtt.homeassistant_discovery:
+  mqtt_homeassistant_discovery:
     name: "Home Assistant Auto-Discovery"
     description: "Aktiviert automatische Geräteerkennung in Home Assistant"
-  mqtt.camel_case_topics:
+  mqtt_camel_case_topics:
     name: "CamelCase Topic Namen"
     description: "Verwendet CamelCase für Topic Namen"
-  allgemein:
-    name: "Allgemeine Einstellungen"
-    description: "Allgemeine Konfiguration"
-  allgemein.steuerung_erlauben:
-    name: "Steuerung erlauben"
-    description: "⚠️ WARNUNG: Ermöglicht die Steuerung der Wärmepumpe (auf eigene Gefahr)"
-  allgemein.protokoll_datei:
+  steuerung_erlauben:
+    name: "⚠️ Steuerung erlauben"
+    description: "WARNUNG: Ermöglicht die Steuerung der Wärmepumpe (auf eigene Gefahr)"
+  protokoll_datei:
     name: "Protokoll Datei"
     description: "Pfad zur Protokoll Datei (optional)"
-  logging:
-    name: "Protokollierung"
-    description: "Einstellungen für die Protokollierung"
-  logging.geraet_hinzugefuegt:
-    name: "Gerät hinzugefügt"
+  log_geraet_hinzugefuegt:
+    name: "Log: Gerät hinzugefügt"
     description: "Protokolliert wenn neue Geräte hinzugefügt werden"
-  logging.nachricht_nicht_gefunden:
-    name: "Nachricht nicht gefunden"
+  log_nachricht_nicht_gefunden:
+    name: "Log: Nachricht nicht gefunden"
     description: "Protokolliert wenn Nachrichten nicht im Repository gefunden werden"
-  logging.paket_nicht_von_innen_aussen:
-    name: "Paket nicht von Innen/Außen"
+  log_paket_nicht_von_innen_aussen:
+    name: "Log: Paket nicht von Innen/Außen"
     description: "Protokolliert Pakete die nicht von Innen- oder Außeneinheit stammen"
-  logging.verarbeitete_nachricht:
-    name: "Verarbeitete Nachricht"
+  log_verarbeitete_nachricht:
+    name: "Log: Verarbeitete Nachricht"
     description: "Protokolliert verarbeitete Nachrichten"
-  logging.poller_nachricht:
-    name: "Poller Nachricht"
+  log_poller_nachricht:
+    name: "Log: Poller Nachricht"
     description: "Protokolliert Poller Nachrichten"
-  logging.steuerungs_nachricht:
-    name: "Steuerungs Nachricht"
+  log_steuerungs_nachricht:
+    name: "Log: Steuerungs Nachricht"
     description: "Protokolliert Steuerungsnachrichten"
-  logging.ungueltiges_paket:
-    name: "Ungültiges Paket"
+  log_ungueltiges_paket:
+    name: "Log: Ungültiges Paket"
     description: "Protokolliert ungültige Pakete"
-  polling:
-    name: "Polling"
-    description: "⚠️ WARNUNG: Aktive Abfrage von Werten (auf eigene Gefahr)"
-  polling.aktiviert:
-    name: "Polling aktiviert"
-    description: "Aktiviert die aktive Abfrage von Werten"
+  polling_aktiviert:
+    name: "⚠️ Polling aktiviert"
+    description: "WARNUNG: Aktiviert die aktive Abfrage von Werten (auf eigene Gefahr)"
