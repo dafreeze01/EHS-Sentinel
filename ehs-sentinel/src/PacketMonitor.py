@@ -38,7 +38,7 @@ class PacketMonitor:
         "weekly": []
     }
     
-    _error_threshold = 0.05  # 5% Fehlerrate als Warnschwelle
+    _error_threshold = 0.15  # 15% Fehlerrate als Warnschwelle (erhöht für bessere Toleranz)
     
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -61,10 +61,10 @@ class PacketMonitor:
     
     def log_invalid_packet(self, message: str, hex_data: List[str], raw_data: bytes):
         """Protokolliert ein ungültiges Paket und aktualisiert die Statistiken."""
-        # Protokolliere das ungültige Paket
-        logger.warning(f"⚠️ Ungültiges Paket: {message}")
-        logger.warning(f"⚠️ Paket-Hex: {hex_data}")
-        logger.warning(f"⚠️ Paket-Rohdaten: {raw_data}")
+        # Protokolliere das ungültige Paket nur bei Debug-Level
+        logger.debug(f"⚠️ Ungültiges Paket: {message}")
+        logger.debug(f"⚠️ Paket-Hex: {hex_data}")
+        logger.debug(f"⚠️ Paket-Rohdaten: {raw_data}")
         
         # Aktualisiere die Statistiken
         self._stats["total_packets"] += 1
@@ -99,13 +99,14 @@ class PacketMonitor:
         # Berechne Fehlerraten
         self._update_error_rates()
         
-        # Speichere die Statistiken
-        self._save_stats()
+        # Speichere die Statistiken alle 100 ungültigen Pakete
+        if self._stats["invalid_packets"] % 100 == 0:
+            self._save_stats()
         
-        # Prüfe, ob die Fehlerrate den Schwellwert überschreitet
-        if self._stats["error_rate"] > self._error_threshold:
-            logger.error(f"🚨 WARNUNG: Fehlerrate von {self._stats['error_rate']:.1%} überschreitet den Schwellwert von {self._error_threshold:.1%}!")
-            logger.error("🚨 Bitte überprüfen Sie die physische Verbindung, WLAN-Kanäle und Modbus-Einstellungen.")
+        # Prüfe, ob die Fehlerrate den Schwellwert überschreitet (nur alle 1000 Pakete)
+        if self._stats["total_packets"] % 1000 == 0 and self._stats["error_rate"] > self._error_threshold:
+            logger.warning(f"🚨 WARNUNG: Fehlerrate von {self._stats['error_rate']:.1%} überschreitet den Schwellwert von {self._error_threshold:.1%}!")
+            logger.warning("🚨 Bitte überprüfen Sie die physische Verbindung, WLAN-Kanäle und Modbus-Einstellungen.")
     
     def log_valid_packet(self):
         """Protokolliert ein gültiges Paket und aktualisiert die Statistiken."""
@@ -142,8 +143,8 @@ class PacketMonitor:
         # Berechne Fehlerraten
         self._update_error_rates()
         
-        # Speichere die Statistiken alle 100 gültigen Pakete
-        if self._stats["valid_packets"] % 100 == 0:
+        # Speichere die Statistiken alle 1000 gültigen Pakete
+        if self._stats["valid_packets"] % 1000 == 0:
             self._save_stats()
     
     def _update_error_rates(self):
@@ -251,8 +252,8 @@ class PacketMonitor:
                 # Speichere die Berichte
                 self._save_reports()
                 
-                # Protokolliere den Bericht
-                if hour_data["total"] > 0:
+                # Protokolliere den Bericht nur bei signifikanten Daten
+                if hour_data["total"] > 100:
                     logger.info(f"📊 Stündlicher Paketqualitäts-Bericht ({hour_key}):")
                     logger.info(f"   Gesamt: {hour_data['total']} Pakete")
                     logger.info(f"   Gültig: {hour_data['valid']} Pakete ({hour_data['valid']/hour_data['total']:.1%})")
@@ -266,7 +267,6 @@ class PacketMonitor:
                 
             except Exception as e:
                 logger.error(f"Fehler bei der Generierung des stündlichen Berichts: {e}")
-                logger.error(traceback.format_exc())
                 await asyncio.sleep(60)  # Bei Fehlern eine Minute warten
     
     async def _generate_daily_reports(self):
@@ -314,8 +314,8 @@ class PacketMonitor:
                 # Speichere die Berichte
                 self._save_reports()
                 
-                # Protokolliere den Bericht
-                if day_data["total"] > 0:
+                # Protokolliere den Bericht nur bei signifikanten Daten
+                if day_data["total"] > 1000:
                     logger.info(f"📊 Täglicher Paketqualitäts-Bericht ({day_key}):")
                     logger.info(f"   Gesamt: {day_data['total']} Pakete")
                     logger.info(f"   Gültig: {day_data['valid']} Pakete ({day_data['valid']/day_data['total']:.1%})")
@@ -333,7 +333,6 @@ class PacketMonitor:
                 
             except Exception as e:
                 logger.error(f"Fehler bei der Generierung des täglichen Berichts: {e}")
-                logger.error(traceback.format_exc())
                 await asyncio.sleep(3600)  # Bei Fehlern eine Stunde warten
     
     async def _generate_weekly_reports(self):
@@ -408,8 +407,8 @@ class PacketMonitor:
                 # Speichere die Berichte
                 self._save_reports()
                 
-                # Protokolliere den Bericht
-                if week_data["total"] > 0:
+                # Protokolliere den Bericht nur bei signifikanten Daten
+                if week_data["total"] > 5000:
                     logger.info(f"📊 Wöchentlicher Paketqualitäts-Bericht ({start_date} bis {end_date}):")
                     logger.info(f"   Gesamt: {week_data['total']} Pakete")
                     logger.info(f"   Gültig: {week_data['valid']} Pakete ({week_data['valid']/week_data['total']:.1%})")
@@ -417,17 +416,12 @@ class PacketMonitor:
                     
                     if week_data["error_rate"] > self._error_threshold:
                         logger.warning(f"⚠️ Fehlerrate von {week_data['error_rate']:.1%} überschreitet den Schwellwert!")
-                        logger.warning("⚠️ Empfehlungen zur Fehlerbehebung:")
-                        logger.warning("   1. Prüfen Sie die physische Verbindung (Kabel, Stecker)")
-                        logger.warning("   2. Testen Sie alternative WLAN-Kanäle bei Funkstörungen")
-                        logger.warning("   3. Validieren Sie die Modbus-Einstellungen (Baudrate, Parität)")
                 
                 # Warte bis zum nächsten Montag
                 await asyncio.sleep(7 * 86400)
                 
             except Exception as e:
                 logger.error(f"Fehler bei der Generierung des wöchentlichen Berichts: {e}")
-                logger.error(traceback.format_exc())
                 await asyncio.sleep(3600)  # Bei Fehlern eine Stunde warten
     
     def get_stats(self) -> Dict:

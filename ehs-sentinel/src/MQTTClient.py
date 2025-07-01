@@ -56,6 +56,7 @@ class MQTTClient:
         self.initialized = True
         self.known_topics: list = list()  # Set to keep track of known topics
         self.known_devices_topic = "known/devices"  # Dedicated topic for storing known topics
+        self.auto_discovery_completed = False  # Flag to track if auto-discovery is done
 
     def set_message_producer(self, producer):
         """Set the message producer instance with proper writer"""
@@ -113,7 +114,11 @@ class MQTTClient:
                 self._publish(f"{self.topicPrefix.replace('/', '')}/{self.known_devices_topic}", " ", retain=True)
                 logger.info("Known Devices Topic have been cleared")          
                 self.clear_hass()
-                logger.info("All configuration from HASS has been resetet") 
+                logger.info("All configuration from HASS has been resetet")
+                
+                # Starte Auto-Discovery für alle verfügbaren Sensoren nach HASS-Reset
+                if not self.auto_discovery_completed:
+                    asyncio.create_task(self.create_all_devices())
         
         if topic.startswith(f"{self.topicPrefix.replace('/', '')}/entity"):
             logger.info(f"HASS Set Entity Messages {topic} received: {payload.decode()}")
@@ -128,6 +133,10 @@ class MQTTClient:
             logger.info(f"Connected to MQTT with result code {rc}")
             if len(self.homeAssistantAutoDiscoverTopic) > 0:
                 self.subscribe_known_topics()
+                
+                # Starte Auto-Discovery für alle verfügbaren Sensoren nach Verbindung
+                if not self.auto_discovery_completed:
+                    asyncio.create_task(self.create_all_devices())
         else:
             logger.error(f"Failed to connect, return code {rc}")
 
@@ -146,6 +155,33 @@ class MQTTClient:
         logger.debug(f"MQTT Publish Topic: {topic} payload: {payload}")
         self.client.publish(f"{topic}", payload, qos, retain)
         #time.sleep(0.1)
+
+    async def create_all_devices(self):
+        """Erstellt Auto-Discovery für alle verfügbaren Sensoren im NASA Repository."""
+        if self.auto_discovery_completed:
+            return
+            
+        logger.info("🚀 Starte Auto-Discovery für alle verfügbaren Sensoren...")
+        
+        total_sensors = len(self.config.NASA_REPO)
+        created_count = 0
+        
+        for sensor_name in self.config.NASA_REPO.keys():
+            if sensor_name not in self.known_topics:
+                try:
+                    self.auto_discover_hass(sensor_name)
+                    self.refresh_known_devices(sensor_name)
+                    created_count += 1
+                    
+                    # Kleine Pause zwischen den Erstellungen, um MQTT nicht zu überlasten
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ Fehler beim Erstellen von Sensor {sensor_name}: {e}")
+        
+        self.auto_discovery_completed = True
+        logger.info(f"✅ Auto-Discovery abgeschlossen: {created_count} neue Sensoren erstellt")
+        logger.info(f"📊 Gesamt verfügbare Sensoren: {len(self.known_topics)}/{total_sensors}")
 
     def refresh_known_devices(self, devname):
         self.known_topics.append(devname)
