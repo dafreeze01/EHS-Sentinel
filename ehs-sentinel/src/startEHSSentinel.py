@@ -6,6 +6,7 @@ import json
 import os
 import datetime
 import yaml
+import time
 from MessageProcessor import MessageProcessor
 from MessageProducer import MessageProducer
 from EHSArguments import EHSArguments
@@ -14,6 +15,11 @@ from EHSExceptions import MessageWarningException, SkipInvalidPacketException
 from MQTTClient import MQTTClient
 from PollingManager import PollingManager
 from PacketMonitor import PacketMonitor
+from SensorMonitor import sensor_monitor
+from MQTTCommunicationAnalyzer import mqtt_analyzer
+from LoggingSystem import structured_logger, LogLevel, LogCategory
+from ConfigurationManager import config_manager
+from TechnicalDocumentation import tech_docs
 import aiofiles
 import random
 
@@ -52,7 +58,11 @@ build_info = {
         "Comprehensive device count reporting",
         "Dreistufige Polling-Strategie",
         "Paketqualitätsüberwachung",
-        "Automatische Geräteerstellung für alle Sensoren"
+        "Automatische Geräteerstellung für alle Sensoren",
+        "Erweiterte Sensor-Überwachung und Konfiguration",
+        "MQTT-Kommunikationsanalyse",
+        "Strukturiertes Logging-System",
+        "Technische Dokumentation"
     ]
 }
 
@@ -101,6 +111,29 @@ async def main():
 
     # Initialisiere den PollingManager
     polling_manager = PollingManager()
+    
+    # Initialisiere den SensorMonitor
+    logger.info("Initializing Sensor Monitor...")
+    
+    # Initialisiere den MQTT Communication Analyzer
+    logger.info("Initializing MQTT Communication Analyzer...")
+    
+    # Initialisiere das Logging-System
+    logger.info("Initializing Structured Logging System...")
+    
+    # Initialisiere den Configuration Manager
+    logger.info("Initializing Configuration Manager...")
+    
+    # Initialisiere die Technische Dokumentation
+    logger.info("Initializing Technical Documentation...")
+    
+    # Starte den API-Server für die Addon-UI
+    try:
+        import subprocess
+        api_process = subprocess.Popen(["python3", "/app/tools/sensor_monitoring_api.py"])
+        logger.info("🚀 Started Sensor Monitoring API on port 5000")
+    except Exception as e:
+        logger.error(f"❌ Failed to start Sensor Monitoring API: {e}")
 
     # we are not in dryrun mode for addon, so we need to read from Serial Port
     try:
@@ -278,20 +311,68 @@ async def process_packet(buffer, args, config):
             logger.warning(f"Error processing message: {e}")
             logger.warning(f"Complete Packet: {[hex(x) for x in buffer]}")
             logger.warning(traceback.format_exc())
+            
+            # Log structured error
+            structured_logger.log_error(
+                category=LogCategory.ERROR_HANDLING,
+                message=f"Value Error on parsing Packet: {e}",
+                details={
+                    "packet_hex": [hex(x) for x in buffer],
+                    "error_type": "ValueError",
+                    "traceback": traceback.format_exc()
+                },
+                error_code="PACKET_PARSE_ERROR"
+            )
         except SkipInvalidPacketException as e:
             logger.debug("Warning occurred, Packet will be skipped")
             logger.debug(f"Error processing message: {e}")
             logger.debug(f"Complete Packet: {[hex(x) for x in buffer]}")
             logger.debug(traceback.format_exc())
+            
+            # Log structured warning
+            structured_logger.log_error(
+                category=LogCategory.ERROR_HANDLING,
+                message=f"Invalid packet skipped: {e}",
+                details={
+                    "packet_hex": [hex(x) for x in buffer],
+                    "error_type": "SkipInvalidPacketException",
+                    "traceback": traceback.format_exc()
+                },
+                error_code="INVALID_PACKET_SKIPPED"
+            )
         except MessageWarningException as e:
             logger.warning("Warning occurred, Packet will be skipped")
             logger.warning(f"Error processing message: {e}")
             logger.warning(f"Complete Packet: {[hex(x) for x in buffer]}")
             logger.warning(traceback.format_exc())
+            
+            # Log structured warning
+            structured_logger.log_error(
+                category=LogCategory.ERROR_HANDLING,
+                message=f"Message warning: {e}",
+                details={
+                    "packet_hex": [hex(x) for x in buffer],
+                    "error_type": "MessageWarningException",
+                    "traceback": traceback.format_exc()
+                },
+                error_code="MESSAGE_WARNING"
+            )
         except Exception as e:
             logger.error("Error Occurred, Packet will be skipped")
             logger.error(f"Error processing message: {e}")
             logger.error(traceback.format_exc())
+            
+            # Log structured error
+            structured_logger.log_error(
+                category=LogCategory.ERROR_HANDLING,
+                message=f"Unexpected error: {e}",
+                details={
+                    "packet_hex": [hex(x) for x in buffer],
+                    "error_type": type(e).__name__,
+                    "traceback": traceback.format_exc()
+                },
+                error_code="UNEXPECTED_ERROR"
+            )
 
 if __name__ == "__main__":
     try:

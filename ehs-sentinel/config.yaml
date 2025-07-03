@@ -11,6 +11,11 @@ arch:
   - i386
 startup: application
 boot: auto
+ingress: true
+ingress_port: 5000
+ingress_stream: true
+panel_icon: mdi:heat-pump
+panel_title: EHS-Sentinel
 
 # Standardwerte für die Konfiguration
 options:
@@ -36,6 +41,7 @@ options:
   polling_aktiviert: false
   
   # Protokollierung
+  log_level: "INFO"
   protokoll_datei: ""
   log_geraet_hinzugefuegt: true
   log_nachricht_nicht_gefunden: false
@@ -44,6 +50,11 @@ options:
   log_poller_nachricht: false
   log_steuerungs_nachricht: false
   log_ungueltiges_paket: false
+  
+  # Sensor-Monitoring
+  sensor_monitoring_aktiviert: true
+  sensor_timeout: 300
+  sensor_fehlerrate_schwellwert: 15
 
 # Schema für die Validierung der Eingaben
 schema:
@@ -69,6 +80,7 @@ schema:
   polling_aktiviert: "bool"
   
   # Protokollierung
+  log_level: "list(DEBUG|INFO|WARNING|ERROR)"
   protokoll_datei: "str?"
   log_geraet_hinzugefuegt: "bool"
   log_nachricht_nicht_gefunden: "bool"
@@ -77,10 +89,16 @@ schema:
   log_poller_nachricht: "bool"
   log_steuerungs_nachricht: "bool"
   log_ungueltiges_paket: "bool"
+  
+  # Sensor-Monitoring
+  sensor_monitoring_aktiviert: "bool"
+  sensor_timeout: "int(60,3600)"
+  sensor_fehlerrate_schwellwert: "int(1,50)"
 
 # Netzwerk-Ports die das Addon benötigt
 ports:
   4196/tcp: 4196
+  5000/tcp: 5000
 
 # Serielle Geräte die das Addon verwenden kann
 devices:

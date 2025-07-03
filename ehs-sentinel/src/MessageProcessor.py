@@ -8,6 +8,8 @@ from EHSConfig import EHSConfig
 from EHSExceptions import MessageWarningException
 from MQTTClient import MQTTClient
 from SafeArithmetic import safe_eval_arithmetic
+from SensorMonitor import sensor_monitor, SensorStatus, ErrorType
+from MQTTCommunicationAnalyzer import mqtt_analyzer, ConversionDirection
 
 from NASAMessage import NASAMessage
 from NASAPacket import NASAPacket
@@ -32,12 +34,37 @@ class MessageProcessor:
             msgname = self.search_nasa_table(hexmsg)
             if msgname is not None:
                 try:
+                    # Measure processing time
+                    start_time = time.time()
+                    
                     msgvalue = self.determine_value(msg.packet_payload, msgname, msg.packet_message_type)
+                    
+                    # Calculate processing time
+                    processing_time_ms = (time.time() - start_time) * 1000
+                    
+                    await self.protocolMessage(msg, msgname, msgvalue, processing_time_ms)
+                    
+                    # Log successful sensor reading
+                    sensor_monitor.log_sensor_reading(
+                        sensor_name=msgname,
+                        raw_value=msg.packet_payload,
+                        converted_value=msgvalue,
+                        response_time_ms=processing_time_ms
+                    )
                 except Exception as e:
                     logger.warning(f"Value of {hexmsg} couldn't be determined, using raw value: {e}")
                     # Use raw value as fallback
                     msgvalue = int.from_bytes(msg.packet_payload, byteorder='big', signed=True)
-                await self.protocolMessage(msg, msgname, msgvalue)
+                    
+                    # Log sensor error
+                    sensor_monitor.log_sensor_error(
+                        sensor_name=msgname,
+                        error_type=ErrorType.CONVERSION_ERROR,
+                        error_message=f"Value conversion failed: {e}",
+                        raw_data=msg.packet_payload
+                    )
+                    
+                    await self.protocolMessage(msg, msgname, msgvalue)
             else:
                 packedval = int.from_bytes(msg.packet_payload, byteorder='big', signed=True)
                 if self.config.LOGGING['messageNotFound']:
@@ -45,7 +72,7 @@ class MessageProcessor:
                 else:
                     logger.debug(f"Message not Found in NASA repository: {hexmsg:<6} Type: {msg.packet_message_type} Payload: {msg.packet_payload} = {packedval}")
 
-    async def protocolMessage(self, msg: NASAMessage, msgname, msgvalue):
+    async def protocolMessage(self, msg: NASAMessage, msgname, msgvalue, processing_time_ms=None):
 
         if self.config.LOGGING['proccessedMessage']:
             logger.info(f"Message number: {hex(msg.packet_message):<6} {msgname:<50} Type: {msg.packet_message_type} Payload: {msgvalue} ({msg.packet_payload})")
@@ -73,6 +100,19 @@ class MessageProcessor:
                     ) , 4
                 )
                 if (value < 15000 and value > 0): # only if heater output between 0 und 15000 W
+                    # Log data conversion
+                    mqtt_analyzer.log_value_conversion(
+                        sensor_name="NASA_EHSSENTINEL_HEAT_OUTPUT",
+                        original_value={
+                            "tw2": self.config.NASA_VAL_STORE['NASA_OUTDOOR_TW2_TEMP'],
+                            "tw1": self.config.NASA_VAL_STORE['NASA_OUTDOOR_TW1_TEMP'],
+                            "flow": self.config.NASA_VAL_STORE['VAR_IN_FLOW_SENSOR_CALC']
+                        },
+                        converted_value=value,
+                        conversion_type=ConversionDirection.DECIMAL_TO_HEX,
+                        success=True
+                    )
+                    
                     await self.protocolMessage(NASAMessage(packet_message=0x9999, packet_message_type=1, packet_payload=[0]),
                                         "NASA_EHSSENTINEL_HEAT_OUTPUT", 
                                         value
@@ -83,6 +123,18 @@ class MessageProcessor:
                 if (self.config.NASA_VAL_STORE['NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT'] > 0):
                     value = round((self.config.NASA_VAL_STORE['NASA_EHSSENTINEL_HEAT_OUTPUT'] / self.config.NASA_VAL_STORE['NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT']/1000.), 3)
                     if (value < 20 and value > 0):
+                        # Log data conversion
+                        mqtt_analyzer.log_value_conversion(
+                            sensor_name="NASA_EHSSENTINEL_COP",
+                            original_value={
+                                "heat_output": self.config.NASA_VAL_STORE['NASA_EHSSENTINEL_HEAT_OUTPUT'],
+                                "power_consumption": self.config.NASA_VAL_STORE['NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT']
+                            },
+                            converted_value=value,
+                            conversion_type=ConversionDirection.DECIMAL_TO_HEX,
+                            success=True
+                        )
+                        
                         await self.protocolMessage(NASAMessage(packet_message=0x9998, packet_message_type=1, packet_payload=[0]), 
                                                 "NASA_EHSSENTINEL_COP",
                                                 value
@@ -94,6 +146,18 @@ class MessageProcessor:
                     value = round(self.config.NASA_VAL_STORE['LVAR_IN_TOTAL_GENERATED_POWER'] / self.config.NASA_VAL_STORE['NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT_ACCUM'], 3)
 
                     if (value < 20 and value > 0):
+                        # Log data conversion
+                        mqtt_analyzer.log_value_conversion(
+                            sensor_name="NASA_EHSSENTINEL_TOTAL_COP",
+                            original_value={
+                                "total_generated_power": self.config.NASA_VAL_STORE['LVAR_IN_TOTAL_GENERATED_POWER'],
+                                "total_consumed_power": self.config.NASA_VAL_STORE['NASA_OUTDOOR_CONTROL_WATTMETER_ALL_UNIT_ACCUM']
+                            },
+                            converted_value=value,
+                            conversion_type=ConversionDirection.DECIMAL_TO_HEX,
+                            success=True
+                        )
+                        
                         await self.protocolMessage(NASAMessage(packet_message=0x9997, packet_message_type=1, packet_payload=[0]), 
                                                 "NASA_EHSSENTINEL_TOTAL_COP",
                                                 value
@@ -122,7 +186,14 @@ class MessageProcessor:
             else:
                 value = "".join([f"{int(x)}" for x in rawvalue])
             
-            #logger.info(f"{msgname} Structure: {rawvalue} type of {value}")
+            # Log data conversion for string values
+            mqtt_analyzer.log_value_conversion(
+                sensor_name=msgname,
+                original_value=rawvalue.hex(),
+                converted_value=value,
+                conversion_type=ConversionDirection.BYTES_TO_STRING,
+                success=True
+            )
         else:
             # Sichere arithmetische Auswertung statt eval()
             if 'arithmetic' in self.config.NASA_REPO[msgname]:
@@ -139,9 +210,28 @@ class MessageProcessor:
                 try:
                     # Verwende sichere arithmetische Auswertung
                     value = safe_eval_arithmetic(arithmetic, packed_value=packed_value)
+                    
+                    # Log data conversion
+                    mqtt_analyzer.log_value_conversion(
+                        sensor_name=msgname,
+                        original_value=packed_value,
+                        converted_value=value,
+                        conversion_type=ConversionDirection.HEX_TO_DECIMAL,
+                        success=True
+                    )
                 except Exception as e:
                     logger.warning(f"Arithmetic Function couldn't been applied for Message {msgname}, using raw value: arithmetic = {arithmetic} {e} {packed_value} {rawvalue}")
                     value = packed_value
+                    
+                    # Log failed conversion
+                    mqtt_analyzer.log_value_conversion(
+                        sensor_name=msgname,
+                        original_value=packed_value,
+                        converted_value=value,
+                        conversion_type=ConversionDirection.HEX_TO_DECIMAL,
+                        success=False,
+                        error_message=f"Arithmetic error: {e}"
+                    )
             else:
                 value = packed_value
 
@@ -152,11 +242,32 @@ class MessageProcessor:
                     if 'enum' in self.config.NASA_REPO[msgname]:
                         raw_value = int.from_bytes(rawvalue, byteorder='big')
                         if raw_value in self.config.NASA_REPO[msgname]['enum']:
-                            value = self.config.NASA_REPO[msgname]['enum'][raw_value]
+                            enum_value = self.config.NASA_REPO[msgname]['enum'][raw_value]
+                            
+                            # Log enum conversion
+                            mqtt_analyzer.log_value_conversion(
+                                sensor_name=msgname,
+                                original_value=raw_value,
+                                converted_value=enum_value,
+                                conversion_type=ConversionDirection.HEX_TO_DECIMAL,
+                                success=True
+                            )
+                            
+                            value = enum_value
                         else:
                             # Handle unknown enum values gracefully
                             logger.warning(f"Unknown enum value {raw_value} for {msgname}, using raw value")
                             value = raw_value
+                            
+                            # Log failed conversion
+                            mqtt_analyzer.log_value_conversion(
+                                sensor_name=msgname,
+                                original_value=raw_value,
+                                converted_value=value,
+                                conversion_type=ConversionDirection.HEX_TO_DECIMAL,
+                                success=False,
+                                error_message=f"Unknown enum value: {raw_value}"
+                            )
                     else:
                         value = f"Unknown enum value: {value}"
                 

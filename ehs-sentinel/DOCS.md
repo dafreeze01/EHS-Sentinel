@@ -8,6 +8,10 @@
 - **Erweiterte Steuerung**: FSV-Parameter für Heizung, Kühlung und Warmwasser
 - **Dreistufige Polling-Strategie**: Optimierte Abfrageintervalle für verschiedene Sensortypen
 - **Paketqualitätsüberwachung**: Automatische Analyse der Kommunikationsqualität
+- **Sensor-Monitoring**: Detaillierte Überwachung aller Sensoren mit Statusanzeige
+- **MQTT-Kommunikationsanalyse**: Überwachung des Nachrichtenflusses und der Datenkonvertierung
+- **Strukturiertes Logging**: Umfassendes Logging-System mit Filteroptionen
+- **Technische Dokumentation**: Automatisch generierte Dokumentation für Kommunikation und Fehlerbehebung
 
 ## 📋 Installation
 
@@ -41,6 +45,16 @@ Wählen Sie zwischen TCP (für RS485-zu-Ethernet Adapter) oder Serial (für USB-
 - **Benutzername/Passwort**: MQTT Anmeldedaten (optional)
 - **Home Assistant Auto-Discovery**: Aktiviert automatische Geräteerkennung
 
+### Sensor-Monitoring
+
+Das Addon bietet ein umfassendes Sensor-Monitoring-System:
+
+- **Sensor-Status**: Überwacht den Status aller Sensoren (aktiv, unbekannt, fehlerhaft)
+- **Timeout-Erkennung**: Erkennt Sensoren, die keine Daten mehr liefern
+- **Fehlerrate-Überwachung**: Analysiert die Fehlerrate für jeden Sensor
+- **Gruppierung**: Sensoren werden in logische Gruppen eingeteilt
+- **Prioritäten**: Kritische Sensoren werden mit höherer Priorität überwacht
+
 ### Polling-Strategie
 
 Das Addon verwendet eine dreistufige Polling-Strategie für optimale Performance:
@@ -59,14 +73,23 @@ Das Addon verwendet eine dreistufige Polling-Strategie für optimale Performance
 
 Die Intervalle können in der Konfiguration angepasst werden.
 
-### Paketqualitätsüberwachung
+### MQTT-Kommunikationsanalyse
 
-Das Addon überwacht automatisch die Qualität der Kommunikation:
+Das Addon analysiert die MQTT-Kommunikation zwischen Home Assistant und der Wärmepumpe:
 
-- **Fehlerrate-Tracking**: Erfassung ungültiger Pakete
-- **Stündliche Statistiken**: Detaillierte Aufzeichnung der Übertragungsfehler
-- **Automatische Warnungen**: Bei Überschreitung des Schwellwerts (>5% fehlerhafte Pakete)
-- **24h-Berichte**: Tägliche Zusammenfassung der Kommunikationsqualität
+- **Nachrichtenfluss**: Überwachung von SET- und STATE-Nachrichten
+- **Datenkonvertierung**: Dokumentation der Konvertierung zwischen Dezimal- und Hex-Werten
+- **Antwortzeiten**: Messung der Antwortzeiten für Befehle
+- **Fehleranalyse**: Identifikation von Kommunikationsproblemen
+
+### Logging-System
+
+Das Addon bietet ein umfassendes Logging-System:
+
+- **Strukturierte Logs**: Kategorisierte Logs mit Zeitstempeln und Kontext
+- **Filteroptionen**: Filtern nach Level, Kategorie, Sensor, Zeitraum
+- **Statistiken**: Analyse der Fehlerraten und Performance
+- **Export**: Export von Logs in verschiedenen Formaten
 
 ### Erweiterte Einstellungen
 
@@ -75,15 +98,46 @@ Das Addon überwacht automatisch die Qualität der Kommunikation:
 - **Steuerung erlauben**: Ermöglicht die Steuerung der Wärmepumpe über Home Assistant
 - **Polling**: Aktiviert aktive Abfrage von Werten
 
-## 🔧 Dashboards
+## 🔧 Addon-UI
 
-Das Addon enthält mehrere vorgefertigte Dashboard-Vorlagen:
+Das Addon bietet eine umfassende Benutzeroberfläche:
 
-1. **Comprehensive Dashboard**: Vollständige Übersicht mit allen Sensoren
-2. **Quick Controls**: Kompakte Steuerung der wichtigsten Funktionen
-3. **Energy Correlation**: Diagramme zur Analyse der Energieeffizienz
+### Dashboard
 
-Zusätzlich kann ein benutzerdefiniertes Dashboard mit dem Tool `create_dashboard.py` erstellt werden.
+- **System-Übersicht**: Gesamtstatus des Systems
+- **Kritische Sensoren**: Status der wichtigsten Sensoren
+- **MQTT-Statistiken**: Kommunikationsstatistiken
+- **Aktuelle Fehler**: Liste der aktuellen Fehler
+
+### Sensoren
+
+- **Sensor-Tabelle**: Übersicht aller Sensoren mit Status
+- **Detailansicht**: Detaillierte Informationen zu jedem Sensor
+- **Filteroptionen**: Filtern nach Gruppe und Status
+
+### MQTT
+
+- **Kommunikationsstatistiken**: Statistiken zur MQTT-Kommunikation
+- **Kommunikationshistorie**: Verlauf der Kommunikation für jeden Sensor
+- **Fehleranalyse**: Analyse von Kommunikationsfehlern
+
+### Logs
+
+- **Log-Einträge**: Alle Log-Einträge mit Filteroptionen
+- **Log-Statistiken**: Statistiken zu Logs und Fehlern
+- **Export**: Export von Logs für die Analyse
+
+### Konfiguration
+
+- **Gruppen-Konfiguration**: Konfiguration von Sensor-Gruppen
+- **Parameter-Konfiguration**: Konfiguration einzelner Parameter
+- **Polling-Intervalle**: Anpassung der Polling-Intervalle
+
+### Dokumentation
+
+- **MQTT-Kommunikation**: Dokumentation der MQTT-Kommunikation
+- **Datenkonvertierung**: Erklärung der Datenkonvertierung
+- **Fehlerbehebung**: Anleitung zur Fehlerbehebung
 
 ## 📊 Berichte und Analysen
 
@@ -102,6 +156,7 @@ Das Addon enthält mehrere nützliche Tools:
 - **generate_24h_report.py**: Erstellt einen detaillierten 24-Stunden-Bericht
 - **packet_quality_analyzer.py**: Analysiert die Paketqualität mit Visualisierungen
 - **create_dashboard.py**: Generiert ein benutzerdefiniertes Dashboard
+- **sensor_monitoring_api.py**: API für die Addon-UI
 
 Diese Tools können über die Home Assistant Terminal-Schnittstelle ausgeführt werden.
 
