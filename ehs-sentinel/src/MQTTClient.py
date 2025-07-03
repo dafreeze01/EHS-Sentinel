@@ -11,6 +11,8 @@ import gmqtt
 from CustomLogger import logger
 from EHSArguments import EHSArguments
 from EHSConfig import EHSConfig
+from SensorMonitor import sensor_monitor, SensorStatus, ErrorType
+from MQTTCommunicationAnalyzer import mqtt_analyzer, MQTTMessageType, ConversionDirection
 
 class MQTTClient:
     """
@@ -122,11 +124,109 @@ class MQTTClient:
         
         if topic.startswith(f"{self.topicPrefix.replace('/', '')}/entity"):
             logger.info(f"HASS Set Entity Messages {topic} received: {payload.decode()}")
+            
+            # Log MQTT message for analysis
             parts = topic.split("/")
+            sensor_name = parts[2] if len(parts) > 2 else None
+            
+            if sensor_name:
+                # Log the SET command
+                mqtt_analyzer.log_mqtt_message(
+                    topic=topic,
+                    payload=payload.decode(),
+                    message_type=MQTTMessageType.SET_COMMAND,
+                    sensor_name=sensor_name,
+                    qos=qos,
+                    retain=properties.get('retain', False)
+                )
+            
             if self.message_producer is not None:
+                # Start time for response time measurement
+                start_time = time.time()
+                
+                # Process the command
                 asyncio.create_task(self.message_producer.write_request(parts[2], payload.decode(), read_request_after=True))
+                
+                # Log the conversion if applicable
+                if sensor_name and sensor_name in self.config.NASA_REPO:
+                    try:
+                        # Get original value
+                        original_value = payload.decode()
+                        
+                        # Determine conversion type
+                        repo_entry = self.config.NASA_REPO[sensor_name]
+                        if 'type' in repo_entry and repo_entry['type'] == 'ENUM':
+                            # For ENUM, convert string to number
+                            enum_values = repo_entry.get('enum', {})
+                            converted_value = None
+                            
+                            for key, val in enum_values.items():
+                                if val == original_value:
+                                    converted_value = key
+                                    break
+                            
+                            if converted_value is not None:
+                                mqtt_analyzer.log_value_conversion(
+                                    sensor_name=sensor_name,
+                                    original_value=original_value,
+                                    converted_value=converted_value,
+                                    conversion_type=ConversionDirection.STRING_TO_BYTES,
+                                    success=True
+                                )
+                            else:
+                                mqtt_analyzer.log_value_conversion(
+                                    sensor_name=sensor_name,
+                                    original_value=original_value,
+                                    converted_value=None,
+                                    conversion_type=ConversionDirection.STRING_TO_BYTES,
+                                    success=False,
+                                    error_message=f"Enum value not found: {original_value}"
+                                )
+                        elif 'reverse-arithmetic' in repo_entry:
+                            # For numeric values with arithmetic
+                            try:
+                                arithmetic = repo_entry['reverse-arithmetic']
+                                value = float(original_value)
+                                
+                                # Simple evaluation for common patterns
+                                if arithmetic == "value * 10":
+                                    converted_value = value * 10
+                                elif arithmetic == "value * 100":
+                                    converted_value = value * 100
+                                elif arithmetic == "value / 10":
+                                    converted_value = value / 10
+                                else:
+                                    # More complex arithmetic would need a safe evaluator
+                                    converted_value = value
+                                
+                                mqtt_analyzer.log_value_conversion(
+                                    sensor_name=sensor_name,
+                                    original_value=original_value,
+                                    converted_value=converted_value,
+                                    conversion_type=ConversionDirection.DECIMAL_TO_HEX,
+                                    success=True
+                                )
+                            except Exception as e:
+                                mqtt_analyzer.log_value_conversion(
+                                    sensor_name=sensor_name,
+                                    original_value=original_value,
+                                    converted_value=None,
+                                    conversion_type=ConversionDirection.DECIMAL_TO_HEX,
+                                    success=False,
+                                    error_message=str(e)
+                                )
+                    except Exception as e:
+                        logger.error(f"Error logging conversion: {e}")
             else:
                 logger.warning(f"⚠️ Cannot process control message - MessageProducer not available")
+                
+                # Log sensor error
+                if sensor_name:
+                    sensor_monitor.log_sensor_error(
+                        sensor_name=sensor_name,
+                        error_type=ErrorType.MQTT_ERROR,
+                        error_message="MessageProducer not available for processing control message"
+                    )
 
     def on_connect(self, client, flags, rc, properties):
         if rc == 0:
@@ -230,6 +330,35 @@ class MQTTClient:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             value = round(value, 2) if isinstance(value, float) and "." in f"{value}" else value
 
+        # Log MQTT message for analysis
+        mqtt_analyzer.log_mqtt_message(
+            topic=topicname,
+            payload=value,
+            message_type=MQTTMessageType.STATE_UPDATE,
+            sensor_name=name,
+            qos=2,
+            retain=False
+        )
+        
+        # Log sensor reading
+        try:
+            # Convert value to bytes for raw_value
+            if isinstance(value, (int, float)):
+                raw_value = str(value).encode()
+            elif isinstance(value, str):
+                raw_value = value.encode()
+            else:
+                raw_value = str(value).encode()
+            
+            sensor_monitor.log_sensor_reading(
+                sensor_name=name,
+                raw_value=raw_value,
+                converted_value=value,
+                mqtt_topic=topicname
+            )
+        except Exception as e:
+            logger.error(f"Error logging sensor reading: {e}")
+        
         self._publish(topicname, value, qos=2, retain=False)
 
     def clear_hass(self):
@@ -356,6 +485,16 @@ class MQTTClient:
         logger.debug(f"Auto Discovery HomeAssistant Message: ")
         logger.debug(f"{device}")
 
+        # Log MQTT message for analysis
+        mqtt_analyzer.log_mqtt_message(
+            topic=f"{self.homeAssistantAutoDiscoverTopic}/{sensor_type}/{self.DEVICE_ID}_{name.lower()}/config",
+            payload=device,
+            message_type=MQTTMessageType.DISCOVERY,
+            sensor_name=name,
+            qos=2,
+            retain=True
+        )
+
         self._publish(f"{self.homeAssistantAutoDiscoverTopic}/{sensor_type}/{self.DEVICE_ID}_{name.lower()}/config",
                       json.dumps(device, ensure_ascii=False),
                       qos=2, 
@@ -363,7 +502,7 @@ class MQTTClient:
 
     def _get_device(self):
         # Dynamic version with build timestamp
-        sw_version = f"1.2.0-{datetime.datetime.now().strftime('%Y%m%d')}"
+        sw_version = f"1.3.1-{datetime.datetime.now().strftime('%Y%m%d')}"
         return {
                 "identifiers": self.DEVICE_ID,
                 "name": "Samsung EHS",

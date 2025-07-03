@@ -10,8 +10,10 @@ bashio::log.info "Starting EHS-Sentinel Home Assistant Addon..."
 if bashio::fs.file_exists "$CONFIG_PATH"; then
     bashio::log.info "Configuration found, starting EHS-Sentinel..."
     
-    # Create data directory if it doesn't exist
+    # Create data directories if they don't exist
     mkdir -p /data/reports
+    mkdir -p /data/logs
+    mkdir -p /data/documentation
     
     # Start EHS-Sentinel with configuration from addon options
     cd /app
