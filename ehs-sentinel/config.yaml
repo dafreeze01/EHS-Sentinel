@@ -40,6 +40,9 @@ options:
   steuerung_erlauben: false
   polling_aktiviert: false
   
+  # UI und API Einstellungen
+  ui_port: 5003
+  
   # Protokollierung
   log_level: "INFO"
   protokoll_datei: ""
@@ -78,6 +81,9 @@ schema:
   # Erweiterte Einstellungen
   steuerung_erlauben: "bool"
   polling_aktiviert: "bool"
+  
+  # UI und API Einstellungen
+  ui_port: "port(1025,65535)"
   
   # Protokollierung
   log_level: "list(DEBUG|INFO|WARNING|ERROR)"

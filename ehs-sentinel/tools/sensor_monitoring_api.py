@@ -8,6 +8,7 @@ from flask_cors import CORS
 import json
 import sys
 import os
+import argparse
 from datetime import datetime
 
 # Füge src-Verzeichnis zum Python-Pfad hinzu
@@ -111,6 +112,11 @@ try:
     print("TechnicalDocumentation imported successfully")
 except ImportError as e:
     print(f"Could not import TechnicalDocumentation: {e}")
+
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='EHS-Sentinel Monitoring API')
+parser.add_argument('--port', type=int, default=5003, help='Port to run the API server on')
+args = parser.parse_args()
 
 app = Flask(__name__, static_folder='/opt/ehs-sentinel-ui', static_url_path='')
 CORS(app)
@@ -511,6 +517,7 @@ def health_check():
 
 if __name__ == '__main__':
     print("🚀 Starting EHS-Sentinel Monitoring API...")
+    print(f"📊 Running on port {args.port}")
     print("📊 Available endpoints:")
     print("  - GET  /api/sensors/status")
     print("  - GET  /api/sensors/<name>/status")
@@ -528,4 +535,4 @@ if __name__ == '__main__':
     print("  - GET  /api/health")
     print("")
     
-    app.run(host='0.0.0.0', port=5003, debug=False)
+    app.run(host='0.0.0.0', port=args.port, debug=False)

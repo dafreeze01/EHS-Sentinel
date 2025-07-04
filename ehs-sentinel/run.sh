@@ -15,9 +15,12 @@ if bashio::fs.file_exists "$CONFIG_PATH"; then
     mkdir -p /data/logs
     mkdir -p /data/documentation
     
+    # Get UI port from configuration
+    UI_PORT=$(bashio::config 'ui_port' '5003')
+    
     # Start the API server for the UI
     cd /app/tools
-    python3 sensor_monitoring_api.py &
+    python3 sensor_monitoring_api.py --port "$UI_PORT" &
     
     # Wait a moment for the API server to start
     sleep 2
