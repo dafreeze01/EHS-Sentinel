@@ -9,6 +9,7 @@ import os
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 from enum import Enum
+from datetime import datetime
 
 from CustomLogger import logger
 
@@ -245,12 +246,27 @@ class ConfigurationManager:
         
         # Bestimme Platform
         if writable:
-            if self.parameters.get(name, {}).parameter_type == ParameterType.ENUM:
-                platform = "select"
-            elif self.parameters.get(name, {}).parameter_type == ParameterType.BOOLEAN:
-                platform = "switch"
+            # Hier ist der Fix: Wir prüfen direkt auf den Parameter-Typ, nicht auf ein Dictionary
+            if name in self.parameters:
+                param = self.parameters[name]
+                if param.parameter_type == ParameterType.ENUM:
+                    platform = "select"
+                elif param.parameter_type == ParameterType.BOOLEAN:
+                    platform = "switch"
+                else:
+                    platform = "number"
             else:
-                platform = "number"
+                # Wenn der Parameter noch nicht existiert, bestimmen wir den Typ aus dem Repository
+                if name in self.nasa_repo:
+                    repo_entry = self.nasa_repo[name]
+                    if repo_entry.get('type') == 'ENUM':
+                        platform = "select"
+                    elif repo_entry.get('type') == 'BOOLEAN':
+                        platform = "switch"
+                    else:
+                        platform = "number"
+                else:
+                    platform = "number"  # Default
         else:
             platform = "sensor"
         
