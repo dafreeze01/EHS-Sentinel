@@ -63,9 +63,6 @@ class StructuredLogger:
         
         # Setup strukturierte Logging-Handler
         self._setup_structured_logging()
-        
-        # Starte Log-Rotation
-        asyncio.create_task(self._log_rotation_task())
     
     def _setup_structured_logging(self):
         """Richtet strukturierte Logging-Handler ein"""
@@ -323,64 +320,6 @@ class StructuredLogger:
             return output.getvalue()
         else:
             raise ValueError(f"Unsupported format: {format}")
-    
-    async def _log_rotation_task(self):
-        """Rotiert Log-Dateien täglich"""
-        while True:
-            try:
-                await asyncio.sleep(3600)  # Prüfe stündlich
-                
-                current_date = datetime.now().strftime('%Y%m%d')
-                expected_file = os.path.join(self.log_dir, f"structured_{current_date}.jsonl")
-                
-                if self.current_log_file != expected_file:
-                    # Komprimiere alte Log-Datei
-                    if self.current_log_file and os.path.exists(self.current_log_file):
-                        await self._compress_log_file(self.current_log_file)
-                    
-                    # Setup neuer Log-Handler
-                    self._setup_structured_logging()
-                
-                # Bereinige alte Log-Dateien (älter als 30 Tage)
-                await self._cleanup_old_logs()
-                
-            except Exception as e:
-                logger.error(f"Fehler bei Log-Rotation: {e}")
-    
-    async def _compress_log_file(self, file_path: str):
-        """Komprimiert eine Log-Datei"""
-        try:
-            compressed_path = f"{file_path}.gz"
-            
-            with open(file_path, 'rb') as f_in:
-                with gzip.open(compressed_path, 'wb') as f_out:
-                    f_out.writelines(f_in)
-            
-            # Lösche ursprüngliche Datei
-            os.remove(file_path)
-            
-            logger.info(f"📦 Log-Datei komprimiert: {compressed_path}")
-            
-        except Exception as e:
-            logger.error(f"Fehler beim Komprimieren der Log-Datei {file_path}: {e}")
-    
-    async def _cleanup_old_logs(self):
-        """Bereinigt alte Log-Dateien"""
-        try:
-            cutoff_date = datetime.now() - timedelta(days=30)
-            
-            for filename in os.listdir(self.log_dir):
-                file_path = os.path.join(self.log_dir, filename)
-                
-                if os.path.isfile(file_path):
-                    file_time = datetime.fromtimestamp(os.path.getctime(file_path))
-                    
-                    if file_time < cutoff_date:
-                        os.remove(file_path)
-                        logger.info(f"🗑️ Alte Log-Datei gelöscht: {filename}")
-            
-        except Exception as e:
-            logger.error(f"Fehler bei Log-Bereinigung: {e}")
 
 class JsonFormatter(logging.Formatter):
     """JSON-Formatter für strukturierte Logs"""

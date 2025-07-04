@@ -182,11 +182,6 @@ class SensorMonitor:
         """Initialisiert das Monitoring-System"""
         # Lade vorherige Status-Daten
         self._load_status_cache()
-        
-        # Starte Monitoring-Tasks
-        asyncio.create_task(self._status_monitor_loop())
-        asyncio.create_task(self._cleanup_old_readings())
-        asyncio.create_task(self._generate_status_reports())
     
     def log_sensor_reading(self, sensor_name: str, raw_value: bytes, 
                           converted_value: Any, response_time_ms: float = None,

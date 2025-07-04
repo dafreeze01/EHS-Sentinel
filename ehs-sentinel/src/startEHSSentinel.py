@@ -66,7 +66,7 @@ build_info = {
     ]
 }
 
-async def main():
+def main():
     """
     Main function to start the EHS Sentinel application for Home Assistant Addon.
     """
@@ -99,6 +99,16 @@ async def main():
     logger.info("Reading Configuration ...")
     config = EHSConfig()
 
+    # Create event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    # Run the main async function
+    loop.run_until_complete(_async_main(args, config))
+    loop.close()
+
+async def _async_main(args, config):
+    """Async main function with proper event loop setup"""
     logger.info("connecting to MQTT Broker ...")
     mqtt = MQTTClient()
     await mqtt.connect()
@@ -376,7 +386,6 @@ async def process_packet(buffer, args, config):
 
 if __name__ == "__main__":
     try:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(main())
+        main()
     except RuntimeError as e:
         logger.error(f"Runtime error: {e}")
