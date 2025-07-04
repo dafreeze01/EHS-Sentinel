@@ -49,16 +49,17 @@ echo "🐳 Base Image: $BASE_IMAGE"
 echo "📁 Kopiere Quelldateien..."
 mkdir -p ehs-sentinel/src
 mkdir -p ehs-sentinel/data
+mkdir -p ehs-sentinel/tools
 
 # Kopiere alle Python-Dateien (außer helpertils und startEHSSentinel.py)
 for file in *.py; do
-    if [[ "$file" != "startEHSSentinel.py" ]] && [[ -f "$file" ]]; then
+    if [ "$file" != "startEHSSentinel.py" ] && [ -f "$file" ]; then
         cp "$file" ehs-sentinel/src/
     fi
 done
 
 # Kopiere die spezielle Addon-Version von startEHSSentinel.py
-if [[ -f "ehs-sentinel/src/startEHSSentinel.py" ]]; then
+if [ -f "ehs-sentinel/src/startEHSSentinel.py" ]; then
     echo "✅ Addon-Version von startEHSSentinel.py bereits vorhanden"
 else
     echo "❌ Addon-Version von startEHSSentinel.py fehlt!"
@@ -69,11 +70,14 @@ fi
 cp requirements.txt ehs-sentinel/
 
 # Kopiere NasaRepository.yml falls vorhanden
-if [[ -f "data/NasaRepository.yml" ]]; then
+if [ -f "data/NasaRepository.yml" ]; then
     cp data/NasaRepository.yml ehs-sentinel/data/
 else
     echo "⚠️  Warnung: data/NasaRepository.yml nicht gefunden - verwende Beispiel-Repository"
 fi
+
+# Kopiere Tools-Verzeichnis
+cp -r tools/* ehs-sentinel/tools/
 
 # Baue das Docker Image
 echo "🔨 Baue Docker Image..."
