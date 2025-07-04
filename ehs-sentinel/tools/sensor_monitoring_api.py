@@ -3,7 +3,7 @@ API-Endpunkte für Sensor-Monitoring und Konfiguration
 Stellt REST-API für die Addon-UI bereit
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import json
 import sys
@@ -22,6 +22,14 @@ from TechnicalDocumentation import tech_docs
 
 app = Flask(__name__)
 CORS(app)
+
+# Serve static files from addon_ui directory
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_static(path):
+    if path == "" or path == "/":
+        return send_from_directory('/opt/ehs-sentinel-ui', 'index.html')
+    return send_from_directory('/opt/ehs-sentinel-ui', path)
 
 @app.route('/api/sensors/status', methods=['GET'])
 def get_sensors_status():
