@@ -5,6 +5,7 @@ Sensor-Monitoring System für EHS-Sentinel
 
 import asyncio
 import json
+import os
 import time
 import logging
 import traceback
