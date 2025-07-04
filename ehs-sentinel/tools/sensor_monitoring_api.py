@@ -12,6 +12,7 @@ from datetime import datetime
 
 # Füge src-Verzeichnis zum Python-Pfad hinzu
 sys.path.append('/app')
+sys.path.append('/app/src')
 
 # Dummy-Klassen für den Fall, dass die Importe fehlschlagen
 class DummySensorMonitor:
@@ -76,31 +77,37 @@ tech_docs = DummyTechDocs()
 
 # Versuche, die echten Module zu importieren
 try:
-    from src.SensorMonitor import sensor_monitor
+    from CustomLogger import logger
+    print("CustomLogger imported successfully")
+except ImportError as e:
+    print(f"Could not import CustomLogger: {e}")
+
+try:
+    from SensorMonitor import sensor_monitor
     print("SensorMonitor imported successfully")
 except ImportError as e:
     print(f"Could not import SensorMonitor: {e}")
 
 try:
-    from src.MQTTCommunicationAnalyzer import mqtt_analyzer
+    from MQTTCommunicationAnalyzer import mqtt_analyzer
     print("MQTTCommunicationAnalyzer imported successfully")
 except ImportError as e:
     print(f"Could not import MQTTCommunicationAnalyzer: {e}")
 
 try:
-    from src.ConfigurationManager import config_manager
+    from ConfigurationManager import config_manager
     print("ConfigurationManager imported successfully")
 except ImportError as e:
     print(f"Could not import ConfigurationManager: {e}")
 
 try:
-    from src.LoggingSystem import structured_logger, LogLevel, LogCategory
+    from LoggingSystem import structured_logger, LogLevel, LogCategory
     print("LoggingSystem imported successfully")
 except ImportError as e:
     print(f"Could not import LoggingSystem: {e}")
 
 try:
-    from src.TechnicalDocumentation import tech_docs
+    from TechnicalDocumentation import tech_docs
     print("TechnicalDocumentation imported successfully")
 except ImportError as e:
     print(f"Could not import TechnicalDocumentation: {e}")
@@ -521,4 +528,4 @@ if __name__ == '__main__':
     print("  - GET  /api/health")
     print("")
     
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5003, debug=False)

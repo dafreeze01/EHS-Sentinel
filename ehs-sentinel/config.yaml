@@ -1,6 +1,6 @@
 name: "EHS-Sentinel"
 description: "Samsung EHS Wärmepumpen Integration für Home Assistant"
-version: "1.3.13"
+version: "1.3.14"
 slug: "ehs-sentinel"
 init: false
 arch:
@@ -12,7 +12,7 @@ arch:
 startup: application
 boot: auto
 ingress: true
-ingress_port: 5000
+ingress_port: 5003
 ingress_stream: true
 panel_icon: mdi:heat-pump
 panel_title: EHS-Sentinel
@@ -98,7 +98,7 @@ schema:
 # Netzwerk-Ports die das Addon benötigt
 ports:
   4196/tcp: 4196
-  5000/tcp: 5000
+  5003/tcp: 5003
 
 # Serielle Geräte die das Addon verwenden kann
 devices:
