@@ -88,8 +88,22 @@ class MQTTCommunicationAnalyzer:
             "avg_response_time": 0.0
         }
         
-        # Starte Cleanup-Task
-        asyncio.create_task(self._cleanup_old_data())
+        # Wir starten den Cleanup-Task nicht im Konstruktor
+        # sondern werden ihn später im Event-Loop starten
+        self._cleanup_task = None
+    
+    def start_cleanup_task(self, loop=None):
+        """Startet den Cleanup-Task im angegebenen Event-Loop"""
+        if loop is None:
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                logger.warning("Kein Event-Loop verfügbar für MQTT-Analyzer Cleanup-Task")
+                return
+        
+        if self._cleanup_task is None:
+            self._cleanup_task = loop.create_task(self._cleanup_old_data())
+            logger.debug("MQTT-Analyzer Cleanup-Task gestartet")
     
     def log_mqtt_message(self, topic: str, payload: Any, message_type: MQTTMessageType,
                         sensor_name: str = None, qos: int = 0, retain: bool = False):

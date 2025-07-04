@@ -70,7 +70,6 @@ def main():
     """
     Main function to start the EHS Sentinel application for Home Assistant Addon.
     """
-
     logger.info("####################################################################################################################")
     logger.info("#                                                                                                                  #")
     logger.info("#    ######   ##  ##   #####             #####    ######  ##   ##  ########  ######  ##   ##   ######   ##         #")
@@ -93,22 +92,49 @@ def main():
     logger.info(f"👨‍💻 Written by echoDave")
     logger.info("")
 
+    # Create event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        # Run the main async function
+        loop.run_until_complete(_async_main())
+    except Exception as e:
+        logger.error(f"❌ Runtime error: {e}")
+        logger.error(traceback.format_exc())
+    finally:
+        # Clean up
+        loop.close()
+
+async def _async_main():
+    """Async main function with proper event loop setup"""
     logger.info("Reading Home Assistant Addon Configuration ...")
     args = EHSArguments()
 
     logger.info("Reading Configuration ...")
     config = EHSConfig()
 
-    # Create event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # Initialize the sensor monitor
+    logger.info("Initializing Sensor Monitor...")
+    # Start the monitoring tasks
+    asyncio.create_task(sensor_monitor._status_monitor_loop())
+    asyncio.create_task(sensor_monitor._cleanup_old_readings())
+    asyncio.create_task(sensor_monitor._generate_status_reports())
+    
+    # Initialize the MQTT Communication Analyzer
+    logger.info("Initializing MQTT Communication Analyzer...")
+    mqtt_analyzer.start_cleanup_task()
+    
+    # Initialize the Logging System
+    logger.info("Initializing Structured Logging System...")
+    asyncio.create_task(structured_logger._log_rotation_task())
+    
+    # Initialize the Configuration Manager
+    logger.info("Initializing Configuration Manager...")
+    
+    # Initialize the Technical Documentation
+    logger.info("Initializing Technical Documentation...")
 
-    # Run the main async function
-    loop.run_until_complete(_async_main(args, config))
-    loop.close()
-
-async def _async_main(args, config):
-    """Async main function with proper event loop setup"""
     logger.info("connecting to MQTT Broker ...")
     mqtt = MQTTClient()
     await mqtt.connect()
@@ -121,21 +147,6 @@ async def _async_main(args, config):
 
     # Initialisiere den PollingManager
     polling_manager = PollingManager()
-    
-    # Initialisiere den SensorMonitor
-    logger.info("Initializing Sensor Monitor...")
-    
-    # Initialisiere den MQTT Communication Analyzer
-    logger.info("Initializing MQTT Communication Analyzer...")
-    
-    # Initialisiere das Logging-System
-    logger.info("Initializing Structured Logging System...")
-    
-    # Initialisiere den Configuration Manager
-    logger.info("Initializing Configuration Manager...")
-    
-    # Initialisiere die Technische Dokumentation
-    logger.info("Initializing Technical Documentation...")
     
     # Starte den API-Server für die Addon-UI
     try:
