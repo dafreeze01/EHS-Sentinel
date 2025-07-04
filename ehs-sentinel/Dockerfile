@@ -30,6 +30,6 @@ COPY run.sh .
 RUN chmod a+x run.sh
 
 # Expose ports for API and UI
-EXPOSE 5000
+EXPOSE 5003
 
 CMD [ "./run.sh" ]

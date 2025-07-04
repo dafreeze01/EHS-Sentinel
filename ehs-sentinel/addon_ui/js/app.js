@@ -1,1850 +1,1942 @@
-// EHS-Sentinel UI JavaScript
+// EHS-Sentinel Monitoring UI
+console.log("Initializing EHS-Sentinel UI...");
+
+// API Base URL - automatically detects the correct URL based on the environment
+const API_BASE_URL = window.location.protocol + '//' + window.location.host;
+
+// Tab Navigation
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Initializing EHS-Sentinel UI...");
-
-    // Get the base URL for API calls
-    const baseUrl = window.location.origin;
-
-    // Set up tab navigation
+    // Initialize tabs
     const tabs = {
-        'dashboard': document.getElementById('tab-dashboard'),
-        'sensors': document.getElementById('tab-sensors'),
-        'mqtt': document.getElementById('tab-mqtt'),
-        'logs': document.getElementById('tab-logs'),
-        'config': document.getElementById('tab-config'),
-        'docs': document.getElementById('tab-docs')
+        'tab-dashboard': 'view-dashboard',
+        'tab-sensors': 'view-sensors',
+        'tab-mqtt': 'view-mqtt',
+        'tab-logs': 'view-logs',
+        'tab-config': 'view-config',
+        'tab-docs': 'view-docs'
     };
-
-    const views = {
-        'dashboard': document.getElementById('view-dashboard'),
-        'sensors': document.getElementById('view-sensors'),
-        'mqtt': document.getElementById('view-mqtt'),
-        'logs': document.getElementById('view-logs'),
-        'config': document.getElementById('view-config'),
-        'docs': document.getElementById('view-docs')
-    };
-
-    // Documentation tabs
-    const docTabs = {
-        'mqtt': document.getElementById('doc-tab-mqtt'),
-        'conversion': document.getElementById('doc-tab-conversion'),
-        'troubleshooting': document.getElementById('doc-tab-troubleshooting')
-    };
-
-    const docViews = {
-        'mqtt': document.getElementById('doc-view-mqtt'),
-        'conversion': document.getElementById('doc-view-conversion'),
-        'troubleshooting': document.getElementById('doc-view-troubleshooting')
-    };
-
+    
     // Set up tab click handlers
-    for (const [tabName, tabElement] of Object.entries(tabs)) {
-        tabElement.addEventListener('click', () => {
-            setActiveTab(tabName);
-        });
-    }
-
-    // Set up documentation tab click handlers
-    for (const [docTabName, docTabElement] of Object.entries(docTabs)) {
-        docTabElement.addEventListener('click', () => {
-            setActiveDocTab(docTabName);
-        });
-    }
-
-    // Set dashboard as the default active tab
-    setActiveTab('dashboard');
-    setActiveDocTab('mqtt');
-
-    // Load initial data
-    loadDashboardData();
-
-    // Set up refresh buttons
-    document.getElementById('refresh-sensors').addEventListener('click', loadSensorsData);
-    document.getElementById('refresh-mqtt').addEventListener('click', loadMQTTData);
-    document.getElementById('refresh-logs').addEventListener('click', loadLogsData);
-    document.getElementById('refresh-config').addEventListener('click', loadConfigData);
-    document.getElementById('generate-docs').addEventListener('click', generateDocumentation);
-    document.getElementById('export-logs').addEventListener('click', exportLogs);
-
-    // Set up modal close buttons
-    document.getElementById('close-modal').addEventListener('click', () => {
-        document.getElementById('sensor-details-modal').classList.add('hidden');
-    });
-
-    document.getElementById('close-group-modal').addEventListener('click', () => {
-        document.getElementById('group-edit-modal').classList.add('hidden');
-    });
-
-    // Set up form submissions
-    document.getElementById('modal-save-config').addEventListener('click', saveSensorConfig);
-    document.getElementById('group-modal-save').addEventListener('click', saveGroupConfig);
-    document.getElementById('apply-log-filters').addEventListener('click', applyLogFilters);
-    document.getElementById('mqtt-load-history').addEventListener('click', loadMQTTHistory);
-
-    // Set up tab change listeners
-    document.getElementById('tab-sensors').addEventListener('click', loadSensorsData);
-    document.getElementById('tab-mqtt').addEventListener('click', loadMQTTData);
-    document.getElementById('tab-logs').addEventListener('click', loadLogsData);
-    document.getElementById('tab-config').addEventListener('click', loadConfigData);
-    document.getElementById('tab-docs').addEventListener('click', loadDocumentation);
-
-    // Set up documentation tab change listeners
-    document.getElementById('doc-tab-mqtt').addEventListener('click', () => loadSpecificDocumentation('mqtt'));
-    document.getElementById('doc-tab-conversion').addEventListener('click', () => loadSpecificDocumentation('conversion'));
-    document.getElementById('doc-tab-troubleshooting').addEventListener('click', () => loadSpecificDocumentation('troubleshooting'));
-
-    // Set up auto-refresh
-    setInterval(loadDashboardData, 60000); // Refresh dashboard every minute
-    setInterval(() => {
-        const activeTab = document.querySelector('.tab-active').id;
-        if (activeTab === 'tab-sensors') {
-            loadSensorsData();
-        } else if (activeTab === 'tab-mqtt') {
-            loadMQTTData();
-        } else if (activeTab === 'tab-logs') {
-            loadLogsData();
-        }
-    }, 300000); // Refresh active tab every 5 minutes
-
-    // Helper function to set the active tab
-    function setActiveTab(tabName) {
-        // Hide all views
-        for (const view of Object.values(views)) {
-            view.classList.add('hidden');
-        }
-        
-        // Remove active class from all tabs
-        for (const tab of Object.values(tabs)) {
-            tab.classList.remove('tab-active');
-            tab.classList.add('tab-inactive');
-        }
-        
-        // Show the selected view and set the tab as active
-        views[tabName].classList.remove('hidden');
-        tabs[tabName].classList.remove('tab-inactive');
-        tabs[tabName].classList.add('tab-active');
-    }
-
-    // Helper function to set the active documentation tab
-    function setActiveDocTab(docTabName) {
-        // Hide all doc views
-        for (const docView of Object.values(docViews)) {
-            docView.classList.add('hidden');
-        }
-        
-        // Remove active class from all doc tabs
-        for (const docTab of Object.values(docTabs)) {
-            docTab.classList.remove('tab-active');
-            docTab.classList.add('tab-inactive');
-        }
-        
-        // Show the selected doc view and set the doc tab as active
-        docViews[docTabName].classList.remove('hidden');
-        docTabs[docTabName].classList.remove('tab-inactive');
-        docTabs[docTabName].classList.add('tab-active');
-    }
-
-    // Load dashboard data
-    function loadDashboardData() {
-        console.log("Loading dashboard data...");
-        
-        // Load health data
-        fetch(`${baseUrl}/api/health`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateSystemHealth(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading health data:", error);
-            });
-        
-        // Load sensor stats
-        fetch(`${baseUrl}/api/sensors/status`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateSensorStats(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading sensor stats:", error);
-            });
-        
-        // Load MQTT stats
-        fetch(`${baseUrl}/api/mqtt/stats`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateMQTTStats(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading MQTT stats:", error);
-            });
-        
-        // Load log stats
-        fetch(`${baseUrl}/api/logs/stats`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateLogStats(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading log stats:", error);
-            });
-    }
-
-    // Update system health display
-    function updateSystemHealth(healthData) {
-        const systemHealthElement = document.getElementById('system-health');
-        const overallHealthElement = document.getElementById('overall-health');
-        const activeSensorsElement = document.getElementById('active-sensors');
-        const errorSensorsElement = document.getElementById('error-sensors');
-        const unknownSensorsElement = document.getElementById('unknown-sensors');
-        const lastUpdateElement = document.getElementById('last-update');
-        
-        // Update system health indicator
-        if (healthData.overall_status === 'healthy') {
-            systemHealthElement.textContent = '✅ System Gesund';
-            systemHealthElement.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800';
-        } else if (healthData.overall_status === 'degraded') {
-            systemHealthElement.textContent = '⚠️ System Beeinträchtigt';
-            systemHealthElement.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800';
-        } else {
-            systemHealthElement.textContent = '❌ System Fehlerhaft';
-            systemHealthElement.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800';
-        }
-        
-        // Update last update time
-        const timestamp = new Date(healthData.components.timestamp);
-        lastUpdateElement.textContent = `Letzte Aktualisierung: ${timestamp.toLocaleTimeString()}`;
-        
-        // Update overall health if available
-        if (overallHealthElement && healthData.components.sensor_monitor) {
-            const healthPercentage = healthData.components.sensor_monitor.health_percentage || 0;
-            overallHealthElement.textContent = `${healthPercentage.toFixed(1)}%`;
-            
-            // Color based on health
-            if (healthPercentage >= 90) {
-                overallHealthElement.className = 'font-semibold text-green-600';
-            } else if (healthPercentage >= 70) {
-                overallHealthElement.className = 'font-semibold text-yellow-600';
-            } else {
-                overallHealthElement.className = 'font-semibold text-red-600';
-            }
-        }
-    }
-
-    // Update sensor statistics display
-    function updateSensorStats(sensorData) {
-        const activeSensorsElement = document.getElementById('active-sensors');
-        const errorSensorsElement = document.getElementById('error-sensors');
-        const unknownSensorsElement = document.getElementById('unknown-sensors');
-        
-        if (activeSensorsElement) {
-            activeSensorsElement.textContent = sensorData.active_sensors || 0;
-        }
-        
-        if (errorSensorsElement) {
-            errorSensorsElement.textContent = sensorData.error_sensors || 0;
-        }
-        
-        if (unknownSensorsElement) {
-            unknownSensorsElement.textContent = sensorData.unknown_sensors || 0;
-        }
-        
-        // Update critical sensors table
-        updateCriticalSensorsTable(sensorData);
-    }
-
-    // Update critical sensors table
-    function updateCriticalSensorsTable(sensorData) {
-        const tableElement = document.getElementById('critical-sensors-table');
-        if (!tableElement) return;
-        
-        // Clear existing rows
-        tableElement.innerHTML = '';
-        
-        // Get critical sensors (priority 1 and 2)
-        let criticalSensors = [];
-        for (const groupName in sensorData.groups) {
-            const group = sensorData.groups[groupName];
-            if (group.sensors) {
-                const groupCriticalSensors = group.sensors.filter(sensor => 
-                    sensor.priority <= 2 || sensor.status === 'error' || sensor.status === 'timeout'
-                );
-                criticalSensors = criticalSensors.concat(groupCriticalSensors);
-            }
-        }
-        
-        // Sort by status (errors first) then by name
-        criticalSensors.sort((a, b) => {
-            if (a.status === 'error' && b.status !== 'error') return -1;
-            if (a.status !== 'error' && b.status === 'error') return 1;
-            if (a.status === 'timeout' && b.status !== 'timeout') return -1;
-            if (a.status !== 'timeout' && b.status === 'timeout') return 1;
-            return a.name.localeCompare(b.name);
-        });
-        
-        // Limit to top 10
-        criticalSensors = criticalSensors.slice(0, 10);
-        
-        // Add rows for each critical sensor
-        for (const sensor of criticalSensors) {
-            const row = document.createElement('tr');
-            
-            // Sensor name
-            const nameCell = document.createElement('td');
-            nameCell.className = 'px-6 py-4 whitespace-nowrap';
-            nameCell.textContent = sensor.name;
-            row.appendChild(nameCell);
-            
-            // Status
-            const statusCell = document.createElement('td');
-            statusCell.className = 'px-6 py-4 whitespace-nowrap';
-            const statusSpan = document.createElement('span');
-            
-            if (sensor.status === 'active') {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800';
-                statusSpan.textContent = 'Aktiv';
-            } else if (sensor.status === 'error') {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800';
-                statusSpan.textContent = 'Fehler';
-            } else if (sensor.status === 'timeout') {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800';
-                statusSpan.textContent = 'Timeout';
-            } else {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800';
-                statusSpan.textContent = sensor.status || 'Unbekannt';
-            }
-            
-            statusCell.appendChild(statusSpan);
-            row.appendChild(statusCell);
-            
-            // Last value
-            const valueCell = document.createElement('td');
-            valueCell.className = 'px-6 py-4 whitespace-nowrap';
-            if (sensor.last_reading && sensor.last_reading.value !== null) {
-                valueCell.textContent = sensor.last_reading.value;
-            } else {
-                valueCell.textContent = '-';
-            }
-            row.appendChild(valueCell);
-            
-            // Timestamp
-            const timestampCell = document.createElement('td');
-            timestampCell.className = 'px-6 py-4 whitespace-nowrap';
-            if (sensor.last_reading && sensor.last_reading.timestamp) {
-                const timestamp = new Date(sensor.last_reading.timestamp);
-                timestampCell.textContent = timestamp.toLocaleString();
-            } else {
-                timestampCell.textContent = '-';
-            }
-            row.appendChild(timestampCell);
-            
-            // Response time
-            const responseTimeCell = document.createElement('td');
-            responseTimeCell.className = 'px-6 py-4 whitespace-nowrap';
-            if (sensor.last_reading && sensor.last_reading.response_time_ms) {
-                responseTimeCell.textContent = `${sensor.last_reading.response_time_ms.toFixed(2)} ms`;
-            } else {
-                responseTimeCell.textContent = '-';
-            }
-            row.appendChild(responseTimeCell);
-            
-            tableElement.appendChild(row);
-        }
-        
-        // If no critical sensors, add a message
-        if (criticalSensors.length === 0) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 5;
-            cell.className = 'px-6 py-4 text-center text-gray-500';
-            cell.textContent = 'Keine kritischen Sensoren gefunden';
-            row.appendChild(cell);
-            tableElement.appendChild(row);
-        }
-    }
-
-    // Update MQTT statistics display
-    function updateMQTTStats(mqttData) {
-        const totalMessagesElement = document.getElementById('mqtt-total-messages');
-        const recentMessagesElement = document.getElementById('mqtt-recent-messages');
-        const successRateElement = document.getElementById('mqtt-success-rate');
-        const responseTimeElement = document.getElementById('mqtt-response-time');
-        
-        if (totalMessagesElement) {
-            totalMessagesElement.textContent = mqttData.message_stats?.total_messages || 0;
-        }
-        
-        if (recentMessagesElement) {
-            recentMessagesElement.textContent = mqttData.message_stats?.messages_last_hour || 0;
-        }
-        
-        if (successRateElement) {
-            const successRate = mqttData.flow_stats?.success_rate || 0;
-            successRateElement.textContent = `${successRate.toFixed(1)}%`;
-        }
-        
-        if (responseTimeElement) {
-            const responseTime = mqttData.flow_stats?.avg_response_time_ms || 0;
-            responseTimeElement.textContent = `${responseTime.toFixed(2)} ms`;
-        }
-        
-        // Update recent errors
-        updateRecentErrors(mqttData.recent_errors || []);
-    }
-
-    // Update recent errors display
-    function updateRecentErrors(errors) {
-        const recentErrorsElement = document.getElementById('recent-errors');
-        if (!recentErrorsElement) return;
-        
-        // Clear existing errors
-        recentErrorsElement.innerHTML = '';
-        
-        // Add each error
-        for (const error of errors) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'bg-red-50 border border-red-200 rounded-md p-4';
-            
-            const errorHeader = document.createElement('div');
-            errorHeader.className = 'flex justify-between';
-            
-            const errorType = document.createElement('span');
-            errorType.className = 'font-semibold text-red-800';
-            errorType.textContent = error.type;
-            errorHeader.appendChild(errorType);
-            
-            const errorTime = document.createElement('span');
-            errorTime.className = 'text-sm text-gray-500';
-            const timestamp = new Date(error.timestamp);
-            errorTime.textContent = timestamp.toLocaleString();
-            errorHeader.appendChild(errorTime);
-            
-            errorDiv.appendChild(errorHeader);
-            
-            const errorMessage = document.createElement('p');
-            errorMessage.className = 'mt-2 text-sm text-gray-700';
-            errorMessage.textContent = error.message;
-            errorDiv.appendChild(errorMessage);
-            
-            const errorDetails = document.createElement('p');
-            errorDetails.className = 'mt-1 text-xs text-gray-500';
-            errorDetails.textContent = `Sensor: ${error.sensor}, Details: ${error.details}`;
-            errorDiv.appendChild(errorDetails);
-            
-            recentErrorsElement.appendChild(errorDiv);
-        }
-        
-        // If no errors, add a message
-        if (errors.length === 0) {
-            const noErrorsDiv = document.createElement('div');
-            noErrorsDiv.className = 'bg-green-50 border border-green-200 rounded-md p-4 text-center';
-            noErrorsDiv.textContent = 'Keine aktuellen Fehler';
-            recentErrorsElement.appendChild(noErrorsDiv);
-        }
-    }
-
-    // Update log statistics display
-    function updateLogStats(logData) {
-        const totalEntriesElement = document.getElementById('log-total-entries');
-        const errorCountElement = document.getElementById('log-error-count');
-        const errorRateElement = document.getElementById('log-error-rate');
-        const avgDurationElement = document.getElementById('log-avg-duration');
-        
-        if (totalEntriesElement) {
-            totalEntriesElement.textContent = logData.total_entries || 0;
-        }
-        
-        if (errorCountElement) {
-            errorCountElement.textContent = logData.level_breakdown?.ERROR || 0;
-        }
-        
-        if (errorRateElement) {
-            const errorRate = logData.error_rate || 0;
-            errorRateElement.textContent = `${errorRate.toFixed(1)}%`;
-        }
-        
-        if (avgDurationElement) {
-            const avgDuration = logData.performance?.avg_duration_ms || 0;
-            avgDurationElement.textContent = `${avgDuration.toFixed(2)} ms`;
-        }
-        
-        // Update level breakdown
-        updateLogLevelBreakdown(logData.level_breakdown || {});
-        
-        // Update category breakdown
-        updateLogCategoryBreakdown(logData.category_breakdown || {});
-        
-        // Update sensor breakdown
-        updateLogSensorBreakdown(logData.sensor_breakdown || {});
-    }
-
-    // Update log level breakdown
-    function updateLogLevelBreakdown(levelData) {
-        const levelStatsElement = document.getElementById('log-stats-level');
-        if (!levelStatsElement) return;
-        
-        // Clear existing stats
-        levelStatsElement.innerHTML = '';
-        
-        // Add each level
-        for (const [level, count] of Object.entries(levelData)) {
-            const levelDiv = document.createElement('div');
-            levelDiv.className = 'flex justify-between';
-            
-            const levelName = document.createElement('span');
-            levelName.className = 'text-gray-600';
-            levelName.textContent = level;
-            levelDiv.appendChild(levelName);
-            
-            const levelCount = document.createElement('span');
-            levelCount.className = 'font-semibold';
-            
-            // Color based on level
-            if (level === 'ERROR' || level === 'CRITICAL') {
-                levelCount.className += ' text-red-600';
-            } else if (level === 'WARNING') {
-                levelCount.className += ' text-yellow-600';
-            } else {
-                levelCount.className += ' text-blue-600';
-            }
-            
-            levelCount.textContent = count;
-            levelDiv.appendChild(levelCount);
-            
-            levelStatsElement.appendChild(levelDiv);
-        }
-    }
-
-    // Update log category breakdown
-    function updateLogCategoryBreakdown(categoryData) {
-        const categoryStatsElement = document.getElementById('log-stats-category');
-        if (!categoryStatsElement) return;
-        
-        // Clear existing stats
-        categoryStatsElement.innerHTML = '';
-        
-        // Add each category
-        for (const [category, count] of Object.entries(categoryData)) {
-            const categoryDiv = document.createElement('div');
-            categoryDiv.className = 'flex justify-between';
-            
-            const categoryName = document.createElement('span');
-            categoryName.className = 'text-gray-600';
-            categoryName.textContent = category.replace(/_/g, ' ');
-            categoryDiv.appendChild(categoryName);
-            
-            const categoryCount = document.createElement('span');
-            categoryCount.className = 'font-semibold';
-            categoryCount.textContent = count;
-            categoryDiv.appendChild(categoryCount);
-            
-            categoryStatsElement.appendChild(categoryDiv);
-        }
-    }
-
-    // Update log sensor breakdown
-    function updateLogSensorBreakdown(sensorData) {
-        const sensorStatsElement = document.getElementById('log-stats-sensors');
-        if (!sensorStatsElement) return;
-        
-        // Clear existing stats
-        sensorStatsElement.innerHTML = '';
-        
-        // Convert to array and sort by errors (descending)
-        const sensors = Object.entries(sensorData)
-            .map(([name, data]) => ({ name, ...data }))
-            .sort((a, b) => b.errors - a.errors)
-            .slice(0, 5); // Top 5
-        
-        // Add each sensor
-        for (const sensor of sensors) {
-            if (sensor.errors === 0) continue; // Skip sensors with no errors
-            
-            const sensorDiv = document.createElement('div');
-            sensorDiv.className = 'flex justify-between';
-            
-            const sensorName = document.createElement('span');
-            sensorName.className = 'text-gray-600';
-            sensorName.textContent = sensor.name;
-            sensorDiv.appendChild(sensorName);
-            
-            const sensorStats = document.createElement('span');
-            sensorStats.className = 'font-semibold';
-            const errorRate = (sensor.errors / sensor.total * 100).toFixed(1);
-            sensorStats.textContent = `${sensor.errors} (${errorRate}%)`;
-            
-            // Color based on error rate
-            if (errorRate > 50) {
-                sensorStats.className += ' text-red-600';
-            } else if (errorRate > 20) {
-                sensorStats.className += ' text-yellow-600';
-            } else {
-                sensorStats.className += ' text-orange-600';
-            }
-            
-            sensorDiv.appendChild(sensorStats);
-            
-            sensorStatsElement.appendChild(sensorDiv);
-        }
-        
-        // If no sensors with errors, add a message
-        if (sensors.length === 0 || sensors.every(s => s.errors === 0)) {
-            const noErrorsDiv = document.createElement('div');
-            noErrorsDiv.className = 'text-center text-green-600';
-            noErrorsDiv.textContent = 'Keine Sensoren mit Fehlern';
-            sensorStatsElement.appendChild(noErrorsDiv);
-        }
-    }
-
-    // Load sensors data
-    function loadSensorsData() {
-        console.log("Loading sensors data...");
-        
-        fetch(`${baseUrl}/api/sensors/status`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateSensorsTable(data.data);
-                    updateGroupFilter(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading sensors data:", error);
-            });
-    }
-
-    // Update sensors table
-    function updateSensorsTable(sensorData) {
-        const tableElement = document.getElementById('sensors-table');
-        if (!tableElement) return;
-        
-        // Clear existing rows
-        tableElement.innerHTML = '';
-        
-        // Get all sensors from all groups
-        let allSensors = [];
-        for (const groupName in sensorData.groups) {
-            const group = sensorData.groups[groupName];
-            if (group.sensors) {
-                for (const sensor of group.sensors) {
-                    sensor.group = groupName; // Add group name to sensor
-                    allSensors.push(sensor);
-                }
-            }
-        }
-        
-        // Apply filters
-        const groupFilter = document.getElementById('group-filter').value;
-        const statusFilter = document.getElementById('status-filter').value;
-        
-        if (groupFilter !== 'all') {
-            allSensors = allSensors.filter(sensor => sensor.group === groupFilter);
-        }
-        
-        if (statusFilter !== 'all') {
-            allSensors = allSensors.filter(sensor => sensor.status === statusFilter);
-        }
-        
-        // Sort by name
-        allSensors.sort((a, b) => a.name.localeCompare(b.name));
-        
-        // Add rows for each sensor
-        for (const sensor of allSensors) {
-            const row = document.createElement('tr');
-            
-            // Sensor name
-            const nameCell = document.createElement('td');
-            nameCell.className = 'px-6 py-4 whitespace-nowrap';
-            nameCell.textContent = sensor.name;
-            row.appendChild(nameCell);
-            
-            // Description
-            const descCell = document.createElement('td');
-            descCell.className = 'px-6 py-4 whitespace-nowrap';
-            descCell.textContent = sensor.description || '-';
-            row.appendChild(descCell);
-            
-            // Group
-            const groupCell = document.createElement('td');
-            groupCell.className = 'px-6 py-4 whitespace-nowrap';
-            groupCell.textContent = sensor.group || '-';
-            row.appendChild(groupCell);
-            
-            // Status
-            const statusCell = document.createElement('td');
-            statusCell.className = 'px-6 py-4 whitespace-nowrap';
-            const statusSpan = document.createElement('span');
-            
-            if (sensor.status === 'active') {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800';
-                statusSpan.textContent = 'Aktiv';
-            } else if (sensor.status === 'error') {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800';
-                statusSpan.textContent = 'Fehler';
-            } else if (sensor.status === 'timeout') {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800';
-                statusSpan.textContent = 'Timeout';
-            } else {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800';
-                statusSpan.textContent = sensor.status || 'Unbekannt';
-            }
-            
-            statusCell.appendChild(statusSpan);
-            row.appendChild(statusCell);
-            
-            // Last value
-            const valueCell = document.createElement('td');
-            valueCell.className = 'px-6 py-4 whitespace-nowrap';
-            if (sensor.last_reading && sensor.last_reading.value !== null) {
-                valueCell.textContent = sensor.last_reading.value;
-            } else {
-                valueCell.textContent = '-';
-            }
-            row.appendChild(valueCell);
-            
-            // Timestamp
-            const timestampCell = document.createElement('td');
-            timestampCell.className = 'px-6 py-4 whitespace-nowrap';
-            if (sensor.last_reading && sensor.last_reading.timestamp) {
-                const timestamp = new Date(sensor.last_reading.timestamp);
-                timestampCell.textContent = timestamp.toLocaleString();
-            } else {
-                timestampCell.textContent = '-';
-            }
-            row.appendChild(timestampCell);
-            
-            // Actions
-            const actionsCell = document.createElement('td');
-            actionsCell.className = 'px-6 py-4 whitespace-nowrap text-right text-sm font-medium';
-            
-            const detailsButton = document.createElement('button');
-            detailsButton.className = 'text-indigo-600 hover:text-indigo-900 mr-2';
-            detailsButton.textContent = 'Details';
-            detailsButton.addEventListener('click', () => {
-                showSensorDetails(sensor);
-            });
-            actionsCell.appendChild(detailsButton);
-            
-            row.appendChild(actionsCell);
-            
-            tableElement.appendChild(row);
-        }
-        
-        // If no sensors, add a message
-        if (allSensors.length === 0) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 7;
-            cell.className = 'px-6 py-4 text-center text-gray-500';
-            cell.textContent = 'Keine Sensoren gefunden';
-            row.appendChild(cell);
-            tableElement.appendChild(row);
-        }
-    }
-
-    // Update group filter dropdown
-    function updateGroupFilter(sensorData) {
-        const groupFilterElement = document.getElementById('group-filter');
-        if (!groupFilterElement) return;
-        
-        // Save current selection
-        const currentSelection = groupFilterElement.value;
-        
-        // Clear existing options (except 'all')
-        while (groupFilterElement.options.length > 1) {
-            groupFilterElement.remove(1);
-        }
-        
-        // Add option for each group
-        const groups = Object.keys(sensorData.groups || {}).sort();
-        for (const group of groups) {
-            const option = document.createElement('option');
-            option.value = group;
-            option.textContent = group;
-            groupFilterElement.appendChild(option);
-        }
-        
-        // Restore selection if it still exists
-        if (currentSelection && Array.from(groupFilterElement.options).some(opt => opt.value === currentSelection)) {
-            groupFilterElement.value = currentSelection;
-        }
-    }
-
-    // Show sensor details in modal
-    function showSensorDetails(sensor) {
-        // Set modal title
-        document.getElementById('modal-sensor-name').textContent = sensor.name;
-        
-        // Set sensor info
-        document.getElementById('modal-description').textContent = sensor.description || '-';
-        document.getElementById('modal-group').textContent = sensor.group || '-';
-        document.getElementById('modal-priority').textContent = sensor.priority || '-';
-        document.getElementById('modal-polling').textContent = `${sensor.polling_interval || '-'} s`;
-        document.getElementById('modal-enabled').textContent = sensor.enabled ? 'Ja' : 'Nein';
-        document.getElementById('modal-writable').textContent = sensor.writable ? 'Ja' : 'Nein';
-        document.getElementById('modal-address').textContent = sensor.nasa_address || '-';
-        document.getElementById('modal-entity-id').textContent = sensor.hass_entity_id || '-';
-        
-        // Set status info
-        document.getElementById('modal-status').textContent = sensor.status || '-';
-        
-        if (sensor.last_reading) {
-            document.getElementById('modal-last-value').textContent = sensor.last_reading.value !== null ? sensor.last_reading.value : '-';
-            
-            if (sensor.last_reading.timestamp) {
-                const timestamp = new Date(sensor.last_reading.timestamp);
-                document.getElementById('modal-timestamp').textContent = timestamp.toLocaleString();
-            } else {
-                document.getElementById('modal-timestamp').textContent = '-';
-            }
-            
-            document.getElementById('modal-response-time').textContent = sensor.last_reading.response_time_ms ? 
-                `${sensor.last_reading.response_time_ms.toFixed(2)} ms` : '-';
-        } else {
-            document.getElementById('modal-last-value').textContent = '-';
-            document.getElementById('modal-timestamp').textContent = '-';
-            document.getElementById('modal-response-time').textContent = '-';
-        }
-        
-        if (sensor.statistics) {
-            document.getElementById('modal-success-rate').textContent = `${sensor.statistics.success_rate.toFixed(1)}%`;
-            document.getElementById('modal-error-count').textContent = sensor.statistics.error_count || 0;
-        } else {
-            document.getElementById('modal-success-rate').textContent = '-';
-            document.getElementById('modal-error-count').textContent = '-';
-        }
-        
-        // Set form values for configuration
-        document.getElementById('modal-input-polling').value = sensor.polling_interval || 60;
-        document.getElementById('modal-input-priority').value = sensor.priority || 3;
-        document.getElementById('modal-input-enabled').checked = sensor.enabled !== false;
-        
-        // Load MQTT history
-        loadSensorMQTTHistory(sensor.name);
-        
-        // Show modal
-        document.getElementById('sensor-details-modal').classList.remove('hidden');
-    }
-
-    // Load sensor MQTT history
-    function loadSensorMQTTHistory(sensorName) {
-        const historyElement = document.getElementById('modal-mqtt-history');
-        if (!historyElement) return;
-        
-        // Clear existing history
-        historyElement.innerHTML = '<p class="text-center text-gray-500">Lade MQTT-Historie...</p>';
-        
-        fetch(`${baseUrl}/api/mqtt/history/${sensorName}?hours=24`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateSensorMQTTHistory(data.data);
-                } else {
-                    historyElement.innerHTML = '<p class="text-center text-red-500">Fehler beim Laden der MQTT-Historie</p>';
-                }
-            })
-            .catch(error => {
-                console.error("Error loading MQTT history:", error);
-                historyElement.innerHTML = '<p class="text-center text-red-500">Fehler beim Laden der MQTT-Historie</p>';
-            });
-    }
-
-    // Update sensor MQTT history display
-    function updateSensorMQTTHistory(historyData) {
-        const historyElement = document.getElementById('modal-mqtt-history');
-        if (!historyElement) return;
-        
-        // Clear existing history
-        historyElement.innerHTML = '';
-        
-        // Check if there's any history
-        if (!historyData.communication_flows || historyData.communication_flows.length === 0) {
-            historyElement.innerHTML = '<p class="text-center text-gray-500">Keine MQTT-Historie verfügbar</p>';
-            return;
-        }
-        
-        // Create table
-        const table = document.createElement('table');
-        table.className = 'min-w-full divide-y divide-gray-200';
-        
-        // Create header
-        const thead = document.createElement('thead');
-        thead.className = 'bg-gray-50';
-        
-        const headerRow = document.createElement('tr');
-        
-        const headers = ['Zeitpunkt', 'Typ', 'SET-Wert', 'STATE-Wert', 'Antwortzeit', 'Status'];
-        for (const header of headers) {
-            const th = document.createElement('th');
-            th.className = 'px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
-            th.textContent = header;
-            headerRow.appendChild(th);
-        }
-        
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-        
-        // Create body
-        const tbody = document.createElement('tbody');
-        tbody.className = 'bg-white divide-y divide-gray-200';
-        
-        // Add rows for each flow
-        for (const flow of historyData.communication_flows) {
-            const row = document.createElement('tr');
-            
-            // Timestamp
-            const timestampCell = document.createElement('td');
-            timestampCell.className = 'px-3 py-2 whitespace-nowrap text-sm';
-            const timestamp = new Date(flow.timestamp);
-            timestampCell.textContent = timestamp.toLocaleTimeString();
-            row.appendChild(timestampCell);
-            
-            // Type
-            const typeCell = document.createElement('td');
-            typeCell.className = 'px-3 py-2 whitespace-nowrap text-sm';
-            typeCell.textContent = flow.initiated_by === 'home_assistant' ? 'SET' : 'STATE';
-            row.appendChild(typeCell);
-            
-            // SET value
-            const setValueCell = document.createElement('td');
-            setValueCell.className = 'px-3 py-2 whitespace-nowrap text-sm';
-            setValueCell.textContent = flow.set_value !== null ? flow.set_value : '-';
-            row.appendChild(setValueCell);
-            
-            // STATE value
-            const stateValueCell = document.createElement('td');
-            stateValueCell.className = 'px-3 py-2 whitespace-nowrap text-sm';
-            stateValueCell.textContent = flow.state_value !== null ? flow.state_value : '-';
-            row.appendChild(stateValueCell);
-            
-            // Response time
-            const responseTimeCell = document.createElement('td');
-            responseTimeCell.className = 'px-3 py-2 whitespace-nowrap text-sm';
-            responseTimeCell.textContent = flow.response_time_ms ? `${flow.response_time_ms.toFixed(2)} ms` : '-';
-            row.appendChild(responseTimeCell);
-            
-            // Status
-            const statusCell = document.createElement('td');
-            statusCell.className = 'px-3 py-2 whitespace-nowrap text-sm';
-            
-            if (flow.success) {
-                statusCell.innerHTML = '<span class="text-green-600">✓</span>';
-            } else if (flow.error_message) {
-                statusCell.innerHTML = `<span class="text-red-600">✗</span> <span class="text-xs">${flow.error_message}</span>`;
-            } else {
-                statusCell.textContent = '-';
-            }
-            
-            row.appendChild(statusCell);
-            
-            tbody.appendChild(row);
-        }
-        
-        table.appendChild(tbody);
-        historyElement.appendChild(table);
-    }
-
-    // Save sensor configuration
-    function saveSensorConfig() {
-        const sensorName = document.getElementById('modal-sensor-name').textContent;
-        const pollingInterval = parseInt(document.getElementById('modal-input-polling').value);
-        const priority = parseInt(document.getElementById('modal-input-priority').value);
-        const enabled = document.getElementById('modal-input-enabled').checked;
-        
-        const updates = {
-            polling_interval: pollingInterval,
-            priority: priority,
-            enabled: enabled
-        };
-        
-        fetch(`${baseUrl}/api/config/parameter/${sensorName}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updates)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Sensor-Konfiguration erfolgreich gespeichert');
-                    document.getElementById('sensor-details-modal').classList.add('hidden');
-                    loadSensorsData(); // Reload sensors data
-                } else {
-                    alert(`Fehler beim Speichern der Sensor-Konfiguration: ${data.error}`);
-                }
-            })
-            .catch(error => {
-                console.error("Error saving sensor config:", error);
-                alert('Fehler beim Speichern der Sensor-Konfiguration');
-            });
-    }
-
-    // Load MQTT data
-    function loadMQTTData() {
-        console.log("Loading MQTT data...");
-        
-        // Load MQTT stats
-        fetch(`${baseUrl}/api/mqtt/stats`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateMQTTStatsDisplay(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading MQTT data:", error);
-            });
-        
-        // Load sensors for filter dropdown
-        fetch(`${baseUrl}/api/sensors/status`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateMQTTSensorFilter(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading sensors for MQTT filter:", error);
-            });
-    }
-
-    // Update MQTT stats display
-    function updateMQTTStatsDisplay(mqttData) {
-        // Update message stats
-        document.getElementById('mqtt-stats-total').textContent = mqttData.message_stats?.total_messages || 0;
-        document.getElementById('mqtt-stats-hour').textContent = mqttData.message_stats?.messages_last_hour || 0;
-        document.getElementById('mqtt-stats-pending').textContent = mqttData.message_stats?.pending_commands || 0;
-        
-        // Update conversion stats
-        document.getElementById('mqtt-stats-conv-success').textContent = mqttData.conversion_stats?.successful_conversions || 0;
-        document.getElementById('mqtt-stats-conv-failed').textContent = mqttData.conversion_stats?.failed_conversions || 0;
-        document.getElementById('mqtt-stats-conv-rate').textContent = `${(mqttData.conversion_stats?.conversion_success_rate || 0).toFixed(1)}%`;
-        
-        // Update flow stats
-        document.getElementById('mqtt-stats-flow-total').textContent = mqttData.flow_stats?.total_flows || 0;
-        document.getElementById('mqtt-stats-flow-success').textContent = mqttData.flow_stats?.successful_flows || 0;
-        document.getElementById('mqtt-stats-flow-rate').textContent = `${(mqttData.flow_stats?.success_rate || 0).toFixed(1)}%`;
-        document.getElementById('mqtt-stats-flow-time').textContent = `${(mqttData.flow_stats?.avg_response_time_ms || 0).toFixed(2)} ms`;
-        
-        // Update recent errors
-        updateMQTTRecentErrors(mqttData.recent_errors || []);
-    }
-
-    // Update MQTT recent errors display
-    function updateMQTTRecentErrors(errors) {
-        const errorsElement = document.getElementById('mqtt-recent-errors');
-        if (!errorsElement) return;
-        
-        // Clear existing errors
-        errorsElement.innerHTML = '';
-        
-        // Add each error
-        for (const error of errors) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'bg-red-50 border border-red-200 rounded-md p-4';
-            
-            const errorHeader = document.createElement('div');
-            errorHeader.className = 'flex justify-between';
-            
-            const errorType = document.createElement('span');
-            errorType.className = 'font-semibold text-red-800';
-            errorType.textContent = error.type;
-            errorHeader.appendChild(errorType);
-            
-            const errorTime = document.createElement('span');
-            errorTime.className = 'text-sm text-gray-500';
-            const timestamp = new Date(error.timestamp);
-            errorTime.textContent = timestamp.toLocaleString();
-            errorHeader.appendChild(errorTime);
-            
-            errorDiv.appendChild(errorHeader);
-            
-            const errorMessage = document.createElement('p');
-            errorMessage.className = 'mt-2 text-sm text-gray-700';
-            errorMessage.textContent = error.message;
-            errorDiv.appendChild(errorMessage);
-            
-            const errorDetails = document.createElement('p');
-            errorDetails.className = 'mt-1 text-xs text-gray-500';
-            errorDetails.textContent = `Sensor: ${error.sensor}, Details: ${error.details}`;
-            errorDiv.appendChild(errorDetails);
-            
-            errorsElement.appendChild(errorDiv);
-        }
-        
-        // If no errors, add a message
-        if (errors.length === 0) {
-            const noErrorsDiv = document.createElement('div');
-            noErrorsDiv.className = 'bg-green-50 border border-green-200 rounded-md p-4 text-center';
-            noErrorsDiv.textContent = 'Keine aktuellen Fehler';
-            errorsElement.appendChild(noErrorsDiv);
-        }
-    }
-
-    // Update MQTT sensor filter dropdown
-    function updateMQTTSensorFilter(sensorData) {
-        const filterElement = document.getElementById('mqtt-sensor-filter');
-        if (!filterElement) return;
-        
-        // Save current selection
-        const currentSelection = filterElement.value;
-        
-        // Clear existing options (except empty option)
-        while (filterElement.options.length > 1) {
-            filterElement.remove(1);
-        }
-        
-        // Get all sensors from all groups
-        let allSensors = [];
-        for (const groupName in sensorData.groups) {
-            const group = sensorData.groups[groupName];
-            if (group.sensors) {
-                for (const sensor of group.sensors) {
-                    allSensors.push(sensor);
-                }
-            }
-        }
-        
-        // Sort by name
-        allSensors.sort((a, b) => a.name.localeCompare(b.name));
-        
-        // Add option for each sensor
-        for (const sensor of allSensors) {
-            const option = document.createElement('option');
-            option.value = sensor.name;
-            option.textContent = sensor.name;
-            filterElement.appendChild(option);
-        }
-        
-        // Restore selection if it still exists
-        if (currentSelection && Array.from(filterElement.options).some(opt => opt.value === currentSelection)) {
-            filterElement.value = currentSelection;
-        }
-    }
-
-    // Load MQTT history for a specific sensor
-    function loadMQTTHistory() {
-        const sensorName = document.getElementById('mqtt-sensor-filter').value;
-        if (!sensorName) {
-            alert('Bitte wählen Sie einen Sensor aus');
-            return;
-        }
-        
-        fetch(`${baseUrl}/api/mqtt/history/${sensorName}?hours=24`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateMQTTHistoryTable(data.data);
-                } else {
-                    alert(`Fehler beim Laden der MQTT-Historie: ${data.error}`);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading MQTT history:", error);
-                alert('Fehler beim Laden der MQTT-Historie');
-            });
-    }
-
-    // Update MQTT history table
-    function updateMQTTHistoryTable(historyData) {
-        const tableElement = document.getElementById('mqtt-history-table');
-        if (!tableElement) return;
-        
-        // Clear existing rows
-        tableElement.innerHTML = '';
-        
-        // Check if there's any history
-        if (!historyData.communication_flows || historyData.communication_flows.length === 0) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 7;
-            cell.className = 'px-6 py-4 text-center text-gray-500';
-            cell.textContent = 'Keine MQTT-Historie verfügbar';
-            row.appendChild(cell);
-            tableElement.appendChild(row);
-            return;
-        }
-        
-        // Add rows for each flow
-        for (const flow of historyData.communication_flows) {
-            const row = document.createElement('tr');
-            
-            // Timestamp
-            const timestampCell = document.createElement('td');
-            timestampCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            const timestamp = new Date(flow.timestamp);
-            timestampCell.textContent = timestamp.toLocaleString();
-            row.appendChild(timestampCell);
-            
-            // Type
-            const typeCell = document.createElement('td');
-            typeCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            typeCell.textContent = flow.initiated_by === 'home_assistant' ? 'SET' : 'STATE';
-            row.appendChild(typeCell);
-            
-            // Initiated by
-            const initiatedCell = document.createElement('td');
-            initiatedCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            initiatedCell.textContent = flow.initiated_by === 'home_assistant' ? 'Home Assistant' : 'EHS-Sentinel';
-            row.appendChild(initiatedCell);
-            
-            // SET value
-            const setValueCell = document.createElement('td');
-            setValueCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            setValueCell.textContent = flow.set_value !== null ? flow.set_value : '-';
-            row.appendChild(setValueCell);
-            
-            // STATE value
-            const stateValueCell = document.createElement('td');
-            stateValueCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            stateValueCell.textContent = flow.state_value !== null ? flow.state_value : '-';
-            row.appendChild(stateValueCell);
-            
-            // Response time
-            const responseTimeCell = document.createElement('td');
-            responseTimeCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            responseTimeCell.textContent = flow.response_time_ms ? `${flow.response_time_ms.toFixed(2)} ms` : '-';
-            row.appendChild(responseTimeCell);
-            
-            // Status
-            const statusCell = document.createElement('td');
-            statusCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            
-            if (flow.success) {
-                statusCell.innerHTML = '<span class="text-green-600">✓</span>';
-            } else if (flow.error_message) {
-                statusCell.innerHTML = `<span class="text-red-600">✗</span> <span class="text-xs">${flow.error_message}</span>`;
-            } else {
-                statusCell.textContent = '-';
-            }
-            
-            row.appendChild(statusCell);
-            
-            tableElement.appendChild(row);
-        }
-    }
-
-    // Load logs data
-    function loadLogsData() {
-        console.log("Loading logs data...");
-        
-        // Load log stats
-        fetch(`${baseUrl}/api/logs/stats`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateLogStats(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading log stats:", error);
-            });
-        
-        // Load sensors for filter dropdown
-        fetch(`${baseUrl}/api/sensors/status`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateLogSensorFilter(data.data);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading sensors for log filter:", error);
-            });
-        
-        // Load log entries
-        loadLogEntries();
-    }
-
-    // Update log sensor filter dropdown
-    function updateLogSensorFilter(sensorData) {
-        const filterElement = document.getElementById('log-filter-sensor');
-        if (!filterElement) return;
-        
-        // Save current selection
-        const currentSelection = filterElement.value;
-        
-        // Clear existing options (except empty option)
-        while (filterElement.options.length > 1) {
-            filterElement.remove(1);
-        }
-        
-        // Get all sensors from all groups
-        let allSensors = [];
-        for (const groupName in sensorData.groups) {
-            const group = sensorData.groups[groupName];
-            if (group.sensors) {
-                for (const sensor of group.sensors) {
-                    allSensors.push(sensor);
-                }
-            }
-        }
-        
-        // Sort by name
-        allSensors.sort((a, b) => a.name.localeCompare(b.name));
-        
-        // Add option for each sensor
-        for (const sensor of allSensors) {
-            const option = document.createElement('option');
-            option.value = sensor.name;
-            option.textContent = sensor.name;
-            filterElement.appendChild(option);
-        }
-        
-        // Restore selection if it still exists
-        if (currentSelection && Array.from(filterElement.options).some(opt => opt.value === currentSelection)) {
-            filterElement.value = currentSelection;
-        }
-    }
-
-    // Load log entries
-    function loadLogEntries() {
-        // Get filter values
-        const level = document.getElementById('log-filter-level').value;
-        const category = document.getElementById('log-filter-category').value;
-        const sensor = document.getElementById('log-filter-sensor').value;
-        const startTime = document.getElementById('log-filter-start').value;
-        const endTime = document.getElementById('log-filter-end').value;
-        const errorsOnly = document.getElementById('log-filter-errors').checked;
-        
-        // Build query string
-        let queryParams = new URLSearchParams();
-        if (level) queryParams.append('level', level);
-        if (category) queryParams.append('category', category);
-        if (sensor) queryParams.append('sensor_name', sensor);
-        if (startTime) queryParams.append('start_time', startTime);
-        if (endTime) queryParams.append('end_time', endTime);
-        if (errorsOnly) queryParams.append('errors_only', 'true');
-        queryParams.append('limit', '50');
-        
-        fetch(`${baseUrl}/api/logs?${queryParams.toString()}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateLogEntriesTable(data.data.logs);
-                } else {
-                    alert(`Fehler beim Laden der Logs: ${data.error}`);
-                }
-            })
-            .catch(error => {
-                console.error("Error loading logs:", error);
-                alert('Fehler beim Laden der Logs');
-            });
-    }
-
-    // Apply log filters
-    function applyLogFilters() {
-        loadLogEntries();
-    }
-
-    // Update log entries table
-    function updateLogEntriesTable(logs) {
-        const tableElement = document.getElementById('log-entries-table');
-        if (!tableElement) return;
-        
-        // Clear existing rows
-        tableElement.innerHTML = '';
-        
-        // Check if there are any logs
-        if (!logs || logs.length === 0) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 6;
-            cell.className = 'px-6 py-4 text-center text-gray-500';
-            cell.textContent = 'Keine Logs gefunden';
-            row.appendChild(cell);
-            tableElement.appendChild(row);
-            return;
-        }
-        
-        // Add rows for each log
-        for (const log of logs) {
-            const row = document.createElement('tr');
-            
-            // Timestamp
-            const timestampCell = document.createElement('td');
-            timestampCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            const timestamp = new Date(log.timestamp);
-            timestampCell.textContent = timestamp.toLocaleString();
-            row.appendChild(timestampCell);
-            
-            // Level
-            const levelCell = document.createElement('td');
-            levelCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            const levelSpan = document.createElement('span');
-            
-            if (log.level === 'ERROR' || log.level === 'CRITICAL') {
-                levelSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800';
-            } else if (log.level === 'WARNING') {
-                levelSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800';
-            } else if (log.level === 'INFO') {
-                levelSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800';
-            } else {
-                levelSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800';
-            }
-            
-            levelSpan.textContent = log.level;
-            levelCell.appendChild(levelSpan);
-            row.appendChild(levelCell);
-            
-            // Category
-            const categoryCell = document.createElement('td');
-            categoryCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            categoryCell.textContent = log.category || '-';
-            row.appendChild(categoryCell);
-            
-            // Sensor
-            const sensorCell = document.createElement('td');
-            sensorCell.className = 'px-6 py-4 whitespace-nowrap text-sm';
-            sensorCell.textContent = log.sensor_name || '-';
-            row.appendChild(sensorCell);
-            
-            // Message
-            const messageCell = document.createElement('td');
-            messageCell.className = 'px-6 py-4 text-sm';
-            messageCell.textContent = log.message || '-';
-            row.appendChild(messageCell);
-            
-            // Details
-            const detailsCell = document.createElement('td');
-            detailsCell.className = 'px-6 py-4 text-sm';
-            
-            if (log.details && Object.keys(log.details).length > 0) {
-                const detailsButton = document.createElement('button');
-                detailsButton.className = 'text-indigo-600 hover:text-indigo-900';
-                detailsButton.textContent = 'Details anzeigen';
-                
-                // Create details popup
-                detailsButton.addEventListener('click', () => {
-                    alert(JSON.stringify(log.details, null, 2));
+    Object.keys(tabs).forEach(tabId => {
+        const tab = document.getElementById(tabId);
+        if (tab) {
+            tab.addEventListener('click', () => {
+                // Hide all tab contents
+                Object.values(tabs).forEach(viewId => {
+                    const view = document.getElementById(viewId);
+                    if (view) view.classList.add('hidden');
                 });
                 
-                detailsCell.appendChild(detailsButton);
-            } else {
-                detailsCell.textContent = '-';
-            }
-            
-            row.appendChild(detailsCell);
-            
-            tableElement.appendChild(row);
-        }
-    }
-
-    // Export logs
-    function exportLogs() {
-        // Get filter values
-        const level = document.getElementById('log-filter-level').value;
-        const category = document.getElementById('log-filter-category').value;
-        const sensor = document.getElementById('log-filter-sensor').value;
-        const startTime = document.getElementById('log-filter-start').value;
-        const endTime = document.getElementById('log-filter-end').value;
-        const errorsOnly = document.getElementById('log-filter-errors').checked;
-        const format = 'json'; // Default to JSON
-        
-        // Build query string
-        let queryParams = new URLSearchParams();
-        if (level) queryParams.append('level', level);
-        if (category) queryParams.append('category', category);
-        if (sensor) queryParams.append('sensor_name', sensor);
-        if (startTime) queryParams.append('start_time', startTime);
-        if (endTime) queryParams.append('end_time', endTime);
-        if (errorsOnly) queryParams.append('errors_only', 'true');
-        queryParams.append('format', format);
-        
-        // Create download link
-        const downloadLink = document.createElement('a');
-        downloadLink.href = `${baseUrl}/api/logs/export?${queryParams.toString()}`;
-        downloadLink.download = `ehs_logs_${new Date().toISOString().replace(/:/g, '-')}.json`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-    }
-
-    // Load configuration data
-    function loadConfigData() {
-        console.log("Loading configuration data...");
-        
-        fetch(`${baseUrl}/api/config/ui`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateConfigurationDisplay(data.data);
+                // Show selected tab content
+                const view = document.getElementById(tabs[tabId]);
+                if (view) view.classList.remove('hidden');
+                
+                // Update tab styles
+                Object.keys(tabs).forEach(id => {
+                    const t = document.getElementById(id);
+                    if (t) {
+                        t.classList.remove('tab-active');
+                        t.classList.add('tab-inactive');
+                    }
+                });
+                
+                tab.classList.remove('tab-inactive');
+                tab.classList.add('tab-active');
+                
+                // Load data for the selected tab
+                if (tabId === 'tab-sensors') {
+                    loadSensorsData();
+                } else if (tabId === 'tab-mqtt') {
+                    loadMQTTData();
+                } else if (tabId === 'tab-logs') {
+                    loadLogsData();
+                } else if (tabId === 'tab-config') {
+                    loadConfigurationData();
+                } else if (tabId === 'tab-docs') {
+                    loadDocumentation();
                 }
-            })
-            .catch(error => {
-                console.error("Error loading configuration:", error);
             });
-    }
-
-    // Update configuration display
-    function updateConfigurationDisplay(configData) {
-        // Update group configuration table
-        updateGroupConfigTable(configData.groups || {});
-        
-        // Update parameter configuration table
-        updateParameterConfigTable(configData.parameters || {});
-        
-        // Update group filter dropdown
-        updateConfigGroupFilter(configData.groups || {});
-    }
-
-    // Update group configuration table
-    function updateGroupConfigTable(groups) {
-        const tableElement = document.getElementById('group-config-table');
-        if (!tableElement) return;
-        
-        // Clear existing rows
-        tableElement.innerHTML = '';
-        
-        // Convert to array and sort by name
-        const groupArray = Object.entries(groups)
-            .map(([name, config]) => ({ name, ...config }))
-            .sort((a, b) => a.name.localeCompare(b.name));
-        
-        // Add rows for each group
-        for (const group of groupArray) {
-            const row = document.createElement('tr');
-            
-            // Group name
-            const nameCell = document.createElement('td');
-            nameCell.className = 'px-6 py-4 whitespace-nowrap';
-            nameCell.textContent = group.name;
-            row.appendChild(nameCell);
-            
-            // Description
-            const descCell = document.createElement('td');
-            descCell.className = 'px-6 py-4 whitespace-nowrap';
-            descCell.textContent = group.description || '-';
-            row.appendChild(descCell);
-            
-            // Priority
-            const priorityCell = document.createElement('td');
-            priorityCell.className = 'px-6 py-4 whitespace-nowrap';
-            priorityCell.textContent = group.priority || '-';
-            row.appendChild(priorityCell);
-            
-            // Polling interval
-            const pollingCell = document.createElement('td');
-            pollingCell.className = 'px-6 py-4 whitespace-nowrap';
-            pollingCell.textContent = group.default_polling_interval ? `${group.default_polling_interval} s` : '-';
-            row.appendChild(pollingCell);
-            
-            // Sensor count
-            const sensorCountCell = document.createElement('td');
-            sensorCountCell.className = 'px-6 py-4 whitespace-nowrap';
-            sensorCountCell.textContent = group.parameter_count || 0;
-            row.appendChild(sensorCountCell);
-            
-            // Status
-            const statusCell = document.createElement('td');
-            statusCell.className = 'px-6 py-4 whitespace-nowrap';
-            const statusSpan = document.createElement('span');
-            
-            if (group.enabled) {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800';
-                statusSpan.textContent = 'Aktiviert';
-            } else {
-                statusSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800';
-                statusSpan.textContent = 'Deaktiviert';
-            }
-            
-            statusCell.appendChild(statusSpan);
-            row.appendChild(statusCell);
-            
-            // Actions
-            const actionsCell = document.createElement('td');
-            actionsCell.className = 'px-6 py-4 whitespace-nowrap text-right text-sm font-medium';
-            
-            const editButton = document.createElement('button');
-            editButton.className = 'text-indigo-600 hover:text-indigo-900';
-            editButton.textContent = 'Bearbeiten';
-            editButton.addEventListener('click', () => {
-                showGroupEditModal(group);
-            });
-            
-            actionsCell.appendChild(editButton);
-            row.appendChild(actionsCell);
-            
-            tableElement.appendChild(row);
         }
-        
-        // If no groups, add a message
-        if (groupArray.length === 0) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 7;
-            cell.className = 'px-6 py-4 text-center text-gray-500';
-            cell.textContent = 'Keine Gruppen gefunden';
-            row.appendChild(cell);
-            tableElement.appendChild(row);
-        }
-    }
-
-    // Update parameter configuration table
-    function updateParameterConfigTable(parameters) {
-        const tableElement = document.getElementById('parameter-config-table');
-        if (!tableElement) return;
-        
-        // Clear existing rows
-        tableElement.innerHTML = '';
-        
-        // Get group filter
-        const groupFilter = document.getElementById('config-group-filter').value;
-        
-        // Convert to array and sort by name
-        let paramArray = Object.entries(parameters)
-            .map(([name, config]) => ({ name, ...config }))
-            .sort((a, b) => a.name.localeCompare(b.name));
-        
-        // Apply group filter
-        if (groupFilter !== 'all') {
-            paramArray = paramArray.filter(param => param.group === groupFilter);
-        }
-        
-        // Add rows for each parameter
-        for (const param of paramArray) {
-            const row = document.createElement('tr');
-            
-            // Parameter name
-            const nameCell = document.createElement('td');
-            nameCell.className = 'px-6 py-4 whitespace-nowrap';
-            nameCell.textContent = param.name;
-            row.appendChild(nameCell);
-            
-            // Description
-            const descCell = document.createElement('td');
-            descCell.className = 'px-6 py-4 whitespace-nowrap';
-            descCell.textContent = param.display_name || '-';
-            row.appendChild(descCell);
-            
-            // Type
-            const typeCell = document.createElement('td');
-            typeCell.className = 'px-6 py-4 whitespace-nowrap';
-            typeCell.textContent = param.type || '-';
-            row.appendChild(typeCell);
-            
-            // Group
-            const groupCell = document.createElement('td');
-            groupCell.className = 'px-6 py-4 whitespace-nowrap';
-            groupCell.textContent = param.group || '-';
-            row.appendChild(groupCell);
-            
-            // Polling interval
-            const pollingCell = document.createElement('td');
-            pollingCell.className = 'px-6 py-4 whitespace-nowrap';
-            pollingCell.textContent = param.polling_interval ? `${param.polling_interval} s` : '-';
-            row.appendChild(pollingCell);
-            
-            // Priority
-            const priorityCell = document.createElement('td');
-            priorityCell.className = 'px-6 py-4 whitespace-nowrap';
-            priorityCell.textContent = param.priority || '-';
-            row.appendChild(priorityCell);
-            
-            // Enabled
-            const enabledCell = document.createElement('td');
-            enabledCell.className = 'px-6 py-4 whitespace-nowrap';
-            const enabledSpan = document.createElement('span');
-            
-            if (param.enabled) {
-                enabledSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800';
-                enabledSpan.textContent = 'Ja';
-            } else {
-                enabledSpan.className = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800';
-                enabledSpan.textContent = 'Nein';
-            }
-            
-            enabledCell.appendChild(enabledSpan);
-            row.appendChild(enabledCell);
-            
-            // Actions
-            const actionsCell = document.createElement('td');
-            actionsCell.className = 'px-6 py-4 whitespace-nowrap text-right text-sm font-medium';
-            
-            const editButton = document.createElement('button');
-            editButton.className = 'text-indigo-600 hover:text-indigo-900';
-            editButton.textContent = 'Bearbeiten';
-            editButton.addEventListener('click', () => {
-                showSensorDetails(param);
-            });
-            
-            actionsCell.appendChild(editButton);
-            row.appendChild(actionsCell);
-            
-            tableElement.appendChild(row);
-        }
-        
-        // If no parameters, add a message
-        if (paramArray.length === 0) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 8;
-            cell.className = 'px-6 py-4 text-center text-gray-500';
-            cell.textContent = 'Keine Parameter gefunden';
-            row.appendChild(cell);
-            tableElement.appendChild(row);
-        }
-    }
-
-    // Update config group filter dropdown
-    function updateConfigGroupFilter(groups) {
-        const filterElement = document.getElementById('config-group-filter');
-        if (!filterElement) return;
-        
-        // Save current selection
-        const currentSelection = filterElement.value;
-        
-        // Clear existing options (except 'all')
-        while (filterElement.options.length > 1) {
-            filterElement.remove(1);
-        }
-        
-        // Add option for each group
-        const groupNames = Object.keys(groups).sort();
-        for (const groupName of groupNames) {
-            const option = document.createElement('option');
-            option.value = groupName;
-            option.textContent = groupName;
-            filterElement.appendChild(option);
-        }
-        
-        // Restore selection if it still exists
-        if (currentSelection && Array.from(filterElement.options).some(opt => opt.value === currentSelection)) {
-            filterElement.value = currentSelection;
-        }
-        
-        // Add change handler
-        filterElement.addEventListener('change', () => {
-            updateParameterConfigTable(configData.parameters || {});
-        });
-    }
-
-    // Show group edit modal
-    function showGroupEditModal(group) {
-        // Set modal title
-        document.getElementById('group-modal-name').textContent = group.name;
-        
-        // Set form values
-        document.getElementById('group-modal-polling').value = group.default_polling_interval || 60;
-        document.getElementById('group-modal-enabled').checked = group.enabled !== false;
-        
-        // Show modal
-        document.getElementById('group-edit-modal').classList.remove('hidden');
-    }
-
-    // Save group configuration
-    function saveGroupConfig() {
-        const groupName = document.getElementById('group-modal-name').textContent;
-        const pollingInterval = parseInt(document.getElementById('group-modal-polling').value);
-        const enabled = document.getElementById('group-modal-enabled').checked;
-        
-        const updates = {
-            default_polling_interval: pollingInterval,
-            enabled: enabled
-        };
-        
-        fetch(`${baseUrl}/api/config/group/${groupName}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updates)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Gruppen-Konfiguration erfolgreich gespeichert');
-                    document.getElementById('group-edit-modal').classList.add('hidden');
-                    loadConfigData(); // Reload configuration data
-                } else {
-                    alert(`Fehler beim Speichern der Gruppen-Konfiguration: ${data.error}`);
+    });
+    
+    // Initialize documentation tabs
+    const docTabs = {
+        'doc-tab-mqtt': 'doc-view-mqtt',
+        'doc-tab-conversion': 'doc-view-conversion',
+        'doc-tab-troubleshooting': 'doc-view-troubleshooting'
+    };
+    
+    Object.keys(docTabs).forEach(tabId => {
+        const tab = document.getElementById(tabId);
+        if (tab) {
+            tab.addEventListener('click', () => {
+                // Hide all doc contents
+                Object.values(docTabs).forEach(viewId => {
+                    const view = document.getElementById(viewId);
+                    if (view) view.classList.add('hidden');
+                });
+                
+                // Show selected doc content
+                const view = document.getElementById(docTabs[tabId]);
+                if (view) view.classList.remove('hidden');
+                
+                // Update tab styles
+                Object.keys(docTabs).forEach(id => {
+                    const t = document.getElementById(id);
+                    if (t) {
+                        t.classList.remove('tab-active');
+                        t.classList.add('tab-inactive');
+                    }
+                });
+                
+                tab.classList.remove('tab-inactive');
+                tab.classList.add('tab-active');
+                
+                // Load documentation content if needed
+                if (tabId === 'doc-tab-mqtt') {
+                    loadMQTTDocumentation();
+                } else if (tabId === 'doc-tab-conversion') {
+                    loadConversionDocumentation();
+                } else if (tabId === 'doc-tab-troubleshooting') {
+                    loadTroubleshootingDocumentation();
                 }
-            })
-            .catch(error => {
-                console.error("Error saving group config:", error);
-                alert('Fehler beim Speichern der Gruppen-Konfiguration');
             });
-    }
-
-    // Load documentation
-    function loadDocumentation() {
-        console.log("Loading documentation...");
-        
-        // Load MQTT documentation by default
-        loadSpecificDocumentation('mqtt');
-    }
-
-    // Load specific documentation
-    function loadSpecificDocumentation(docType) {
-        fetch(`${baseUrl}/api/documentation/${docType}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateDocumentationContent(docType, data.data.content);
-                } else {
-                    console.error(`Error loading ${docType} documentation:`, data.error);
-                }
-            })
-            .catch(error => {
-                console.error(`Error loading ${docType} documentation:`, error);
-            });
-    }
-
-    // Update documentation content
-    function updateDocumentationContent(docType, content) {
-        const contentElement = document.getElementById(`${docType}-doc-content`);
-        if (!contentElement) return;
-        
-        // Use marked.js to render markdown
-        if (window.marked) {
-            contentElement.innerHTML = marked.parse(content);
-        } else {
-            // Fallback to simple formatting
-            contentElement.innerHTML = content
-                .replace(/\n\n/g, '<br><br>')
-                .replace(/\n/g, '<br>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/#{3} (.*?)$/gm, '<h3>$1</h3>')
-                .replace(/#{2} (.*?)$/gm, '<h2>$1</h2>')
-                .replace(/#{1} (.*?)$/gm, '<h1>$1</h1>');
         }
-    }
-
-    // Generate documentation
-    function generateDocumentation() {
-        fetch(`${baseUrl}/api/documentation/generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                output_dir: '/data/documentation'
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Dokumentation erfolgreich generiert');
-                    // Reload current documentation
-                    const activeDocTab = document.querySelector('#view-docs .tab-active').id;
-                    const docType = activeDocTab.replace('doc-tab-', '');
-                    loadSpecificDocumentation(docType);
-                } else {
-                    alert(`Fehler beim Generieren der Dokumentation: ${data.error}`);
-                }
-            })
-            .catch(error => {
-                console.error("Error generating documentation:", error);
-                alert('Fehler beim Generieren der Dokumentation');
+    });
+    
+    // Load initial dashboard data
+    loadDashboardData();
+    
+    // Set up refresh buttons
+    const refreshButtons = {
+        'refresh-sensors': loadSensorsData,
+        'refresh-mqtt': loadMQTTData,
+        'refresh-logs': loadLogsData,
+        'refresh-config': loadConfigurationData
+    };
+    
+    Object.keys(refreshButtons).forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.addEventListener('click', refreshButtons[buttonId]);
+        }
+    });
+    
+    // Set up modal close buttons
+    const closeButtons = ['close-modal', 'close-group-modal'];
+    closeButtons.forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.addEventListener('click', () => {
+                const modalId = buttonId === 'close-modal' ? 'sensor-details-modal' : 'group-edit-modal';
+                const modal = document.getElementById(modalId);
+                if (modal) modal.classList.add('hidden');
             });
+        }
+    });
+    
+    // Set up save buttons
+    const saveButtons = {
+        'modal-save-config': saveSensorConfig,
+        'group-modal-save': saveGroupConfig
+    };
+    
+    Object.keys(saveButtons).forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.addEventListener('click', saveButtons[buttonId]);
+        }
+    });
+    
+    // Set up documentation generation
+    const generateDocsButton = document.getElementById('generate-docs');
+    if (generateDocsButton) {
+        generateDocsButton.addEventListener('click', generateDocumentation);
+    }
+    
+    // Set up MQTT history loading
+    const mqttLoadHistoryButton = document.getElementById('mqtt-load-history');
+    if (mqttLoadHistoryButton) {
+        mqttLoadHistoryButton.addEventListener('click', loadMQTTHistory);
+    }
+    
+    // Set up log filters
+    const applyLogFiltersButton = document.getElementById('apply-log-filters');
+    if (applyLogFiltersButton) {
+        applyLogFiltersButton.addEventListener('click', applyLogFilters);
+    }
+    
+    // Set up log export
+    const exportLogsButton = document.getElementById('export-logs');
+    if (exportLogsButton) {
+        exportLogsButton.addEventListener('click', exportLogs);
+    }
+    
+    // Set up load more logs
+    const loadMoreLogsButton = document.getElementById('load-more-logs');
+    if (loadMoreLogsButton) {
+        loadMoreLogsButton.addEventListener('click', loadMoreLogs);
     }
 });
+
+// Dashboard Data Loading
+function loadDashboardData() {
+    console.log("Loading dashboard data...");
+    
+    // Load health data
+    fetch(`${API_BASE_URL}/api/health`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateSystemHealth(data.data);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading health data:", error);
+        });
+    
+    // Load sensor stats
+    fetch(`${API_BASE_URL}/api/sensors/status`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateSensorStats(data.data);
+                updateCriticalSensors(data.data);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading sensor stats:", error);
+        });
+    
+    // Load MQTT stats
+    fetch(`${API_BASE_URL}/api/mqtt/stats`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateMQTTStats(data.data);
+                updateRecentErrors(data.data.recent_errors);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading MQTT stats:", error);
+        });
+    
+    // Load log stats
+    fetch(`${API_BASE_URL}/api/logs/stats`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateLogStats(data.data);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading log stats:", error);
+        });
+    
+    // Update last update time
+    const lastUpdate = document.getElementById('last-update');
+    if (lastUpdate) {
+        lastUpdate.textContent = `Letzte Aktualisierung: ${new Date().toLocaleTimeString()}`;
+    }
+}
+
+// Update System Health
+function updateSystemHealth(data) {
+    const systemHealth = document.getElementById('system-health');
+    if (!systemHealth) return;
+    
+    const status = data.overall_status;
+    
+    if (status === 'healthy') {
+        systemHealth.textContent = '✅ System gesund';
+        systemHealth.classList.add('bg-green-100', 'text-green-800');
+    } else if (status === 'degraded') {
+        systemHealth.textContent = '⚠️ System beeinträchtigt';
+        systemHealth.classList.add('bg-yellow-100', 'text-yellow-800');
+    } else {
+        systemHealth.textContent = '❌ System fehlerhaft';
+        systemHealth.classList.add('bg-red-100', 'text-red-800');
+    }
+}
+
+// Update Sensor Stats
+function updateSensorStats(data) {
+    const overallHealth = document.getElementById('overall-health');
+    const activeSensors = document.getElementById('active-sensors');
+    const errorSensors = document.getElementById('error-sensors');
+    const unknownSensors = document.getElementById('unknown-sensors');
+    
+    if (overallHealth) {
+        const healthPercent = data.overall_health || 0;
+        let healthClass = 'text-green-600';
+        
+        if (healthPercent < 50) {
+            healthClass = 'text-red-600';
+        } else if (healthPercent < 80) {
+            healthClass = 'text-yellow-600';
+        }
+        
+        overallHealth.textContent = `${healthPercent}%`;
+        overallHealth.className = `font-semibold ${healthClass}`;
+    }
+    
+    if (activeSensors) {
+        activeSensors.textContent = `${data.active_sensors || 0} / ${data.total_sensors || 0}`;
+    }
+    
+    if (errorSensors) {
+        errorSensors.textContent = data.error_sensors || 0;
+    }
+    
+    if (unknownSensors) {
+        unknownSensors.textContent = data.unknown_sensors || 0;
+    }
+}
+
+// Update Critical Sensors
+function updateCriticalSensors(data) {
+    const table = document.getElementById('critical-sensors-table');
+    if (!table) return;
+    
+    // Clear existing rows
+    table.innerHTML = '';
+    
+    // Get critical sensors (priority 1 and 2)
+    const criticalSensors = [];
+    
+    Object.values(data.groups || {}).forEach(group => {
+        group.sensors.forEach(sensor => {
+            if (sensor.priority <= 2) {
+                criticalSensors.push(sensor);
+            }
+        });
+    });
+    
+    // Sort by status (error first, then timeout, then unknown, then active)
+    criticalSensors.sort((a, b) => {
+        const statusOrder = { 'error': 0, 'crc_error': 1, 'timeout': 2, 'unknown': 3, 'active': 4 };
+        return statusOrder[a.status] - statusOrder[b.status];
+    });
+    
+    // Add rows for each critical sensor
+    criticalSensors.forEach(sensor => {
+        const row = document.createElement('tr');
+        
+        // Status class
+        let statusClass = 'status-unknown';
+        if (sensor.status === 'active') {
+            statusClass = 'status-active';
+        } else if (sensor.status === 'error' || sensor.status === 'crc_error') {
+            statusClass = 'status-error';
+        } else if (sensor.status === 'timeout') {
+            statusClass = 'status-timeout';
+        }
+        
+        // Format last reading
+        let lastValue = 'N/A';
+        let timestamp = 'N/A';
+        let responseTime = 'N/A';
+        
+        if (sensor.last_reading) {
+            lastValue = sensor.last_reading.value !== null ? sensor.last_reading.value : 'N/A';
+            timestamp = new Date(sensor.last_reading.timestamp).toLocaleString();
+            responseTime = sensor.last_reading.response_time_ms !== null ? 
+                `${sensor.last_reading.response_time_ms.toFixed(2)} ms` : 'N/A';
+        }
+        
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${sensor.name}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                    ${sensor.status}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${lastValue}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${timestamp}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${responseTime}</td>
+        `;
+        
+        table.appendChild(row);
+    });
+    
+    // If no critical sensors, add a message
+    if (criticalSensors.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                Keine kritischen Sensoren gefunden.
+            </td>
+        `;
+        table.appendChild(row);
+    }
+}
+
+// Update MQTT Stats
+function updateMQTTStats(data) {
+    // Message stats
+    const totalMessages = document.getElementById('mqtt-total-messages');
+    const recentMessages = document.getElementById('mqtt-recent-messages');
+    
+    if (totalMessages && data.message_stats) {
+        totalMessages.textContent = data.message_stats.total_messages || 0;
+    }
+    
+    if (recentMessages && data.message_stats) {
+        recentMessages.textContent = data.message_stats.messages_last_hour || 0;
+    }
+    
+    // Flow stats
+    const successRate = document.getElementById('mqtt-success-rate');
+    const responseTime = document.getElementById('mqtt-response-time');
+    
+    if (successRate && data.flow_stats) {
+        const rate = data.flow_stats.success_rate || 0;
+        successRate.textContent = `${rate.toFixed(2)}%`;
+        
+        if (rate < 50) {
+            successRate.classList.add('text-red-600');
+        } else if (rate < 80) {
+            successRate.classList.add('text-yellow-600');
+        } else {
+            successRate.classList.add('text-green-600');
+        }
+    }
+    
+    if (responseTime && data.flow_stats) {
+        responseTime.textContent = `${data.flow_stats.avg_response_time || 0} ms`;
+    }
+    
+    // MQTT Stats view
+    const statsTotal = document.getElementById('mqtt-stats-total');
+    const statsHour = document.getElementById('mqtt-stats-hour');
+    const statsPending = document.getElementById('mqtt-stats-pending');
+    
+    if (statsTotal && data.message_stats) {
+        statsTotal.textContent = data.message_stats.total_messages || 0;
+    }
+    
+    if (statsHour && data.message_stats) {
+        statsHour.textContent = data.message_stats.messages_last_hour || 0;
+    }
+    
+    if (statsPending && data.message_stats) {
+        statsPending.textContent = data.message_stats.pending_commands || 0;
+    }
+    
+    // Conversion stats
+    const convSuccess = document.getElementById('mqtt-stats-conv-success');
+    const convFailed = document.getElementById('mqtt-stats-conv-failed');
+    const convRate = document.getElementById('mqtt-stats-conv-rate');
+    
+    if (data.conversion_stats) {
+        if (convSuccess) {
+            convSuccess.textContent = data.conversion_stats.successful_conversions || 0;
+        }
+        
+        if (convFailed) {
+            convFailed.textContent = data.conversion_stats.failed_conversions || 0;
+        }
+        
+        if (convRate) {
+            const rate = data.conversion_stats.conversion_success_rate || 0;
+            convRate.textContent = `${rate.toFixed(2)}%`;
+            
+            if (rate < 50) {
+                convRate.classList.add('text-red-600');
+            } else if (rate < 80) {
+                convRate.classList.add('text-yellow-600');
+            } else {
+                convRate.classList.add('text-green-600');
+            }
+        }
+    }
+    
+    // Flow stats
+    const flowTotal = document.getElementById('mqtt-stats-flow-total');
+    const flowSuccess = document.getElementById('mqtt-stats-flow-success');
+    const flowRate = document.getElementById('mqtt-stats-flow-rate');
+    const flowTime = document.getElementById('mqtt-stats-flow-time');
+    
+    if (data.flow_stats) {
+        if (flowTotal) {
+            flowTotal.textContent = data.flow_stats.total_flows || 0;
+        }
+        
+        if (flowSuccess) {
+            flowSuccess.textContent = data.flow_stats.successful_flows || 0;
+        }
+        
+        if (flowRate) {
+            const rate = data.flow_stats.success_rate || 0;
+            flowRate.textContent = `${rate.toFixed(2)}%`;
+            
+            if (rate < 50) {
+                flowRate.classList.add('text-red-600');
+            } else if (rate < 80) {
+                flowRate.classList.add('text-yellow-600');
+            } else {
+                flowRate.classList.add('text-green-600');
+            }
+        }
+        
+        if (flowTime) {
+            flowTime.textContent = `${data.flow_stats.avg_response_time || 0} ms`;
+        }
+    }
+    
+    // Recent errors
+    updateMQTTRecentErrors(data.recent_errors || []);
+}
+
+// Update MQTT Recent Errors
+function updateMQTTRecentErrors(errors) {
+    const container = document.getElementById('mqtt-recent-errors');
+    if (!container) return;
+    
+    // Clear existing errors
+    container.innerHTML = '';
+    
+    // Add errors
+    if (errors.length === 0) {
+        container.innerHTML = `
+            <div class="bg-green-50 p-4 rounded-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-green-800">
+                            Keine Fehler in der letzten Stunde.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    errors.forEach(error => {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'bg-red-50 p-4 rounded-lg';
+        
+        errorDiv.innerHTML = `
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">${error.type} - ${error.sensor || 'Unbekannter Sensor'}</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <p>${error.message}</p>
+                        <p class="mt-1 text-xs text-red-600">${error.details}</p>
+                        <p class="mt-1 text-xs text-gray-500">${new Date(error.timestamp).toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(errorDiv);
+    });
+}
+
+// Update Log Stats
+function updateLogStats(data) {
+    const totalEntries = document.getElementById('log-total-entries');
+    const errorCount = document.getElementById('log-error-count');
+    const errorRate = document.getElementById('log-error-rate');
+    const avgDuration = document.getElementById('log-avg-duration');
+    
+    if (totalEntries) {
+        totalEntries.textContent = data.total_entries || 0;
+    }
+    
+    if (errorCount && data.level_breakdown) {
+        const errors = data.level_breakdown.ERROR || 0;
+        errorCount.textContent = errors;
+    }
+    
+    if (errorRate) {
+        const rate = data.error_rate || 0;
+        errorRate.textContent = `${rate.toFixed(2)}%`;
+        
+        if (rate > 10) {
+            errorRate.classList.add('text-red-600');
+        } else if (rate > 5) {
+            errorRate.classList.add('text-yellow-600');
+        } else {
+            errorRate.classList.add('text-green-600');
+        }
+    }
+    
+    if (avgDuration && data.performance) {
+        avgDuration.textContent = `${data.performance.avg_duration_ms || 0} ms`;
+    }
+    
+    // Update log stats view
+    updateLogStatsView(data);
+}
+
+// Update Recent Errors
+function updateRecentErrors(errors) {
+    const container = document.getElementById('recent-errors');
+    if (!container) return;
+    
+    // Clear existing errors
+    container.innerHTML = '';
+    
+    // Add errors
+    if (!errors || errors.length === 0) {
+        container.innerHTML = `
+            <div class="bg-green-50 p-4 rounded-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-green-800">
+                            Keine Fehler in der letzten Stunde.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    errors.forEach(error => {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'bg-red-50 p-4 rounded-lg';
+        
+        errorDiv.innerHTML = `
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">${error.type} - ${error.sensor || 'Unbekannter Sensor'}</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <p>${error.message}</p>
+                        <p class="mt-1 text-xs text-red-600">${error.details}</p>
+                        <p class="mt-1 text-xs text-gray-500">${new Date(error.timestamp).toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(errorDiv);
+    });
+}
+
+// Sensors Data Loading
+function loadSensorsData() {
+    console.log("Loading sensors data...");
+    
+    fetch(`${API_BASE_URL}/api/sensors/status`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateSensorsTable(data.data);
+                updateGroupFilter(data.data);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading sensors data:", error);
+        });
+}
+
+// Update Sensors Table
+function updateSensorsTable(data, groupFilter = 'all', statusFilter = 'all') {
+    const table = document.getElementById('sensors-table');
+    if (!table) return;
+    
+    // Clear existing rows
+    table.innerHTML = '';
+    
+    // Collect all sensors from all groups
+    const allSensors = [];
+    
+    Object.values(data.groups || {}).forEach(group => {
+        group.sensors.forEach(sensor => {
+            // Add group name to sensor
+            sensor.group_name = group.group;
+            allSensors.push(sensor);
+        });
+    });
+    
+    // Apply filters
+    let filteredSensors = allSensors;
+    
+    if (groupFilter !== 'all') {
+        filteredSensors = filteredSensors.filter(sensor => sensor.group_name === groupFilter);
+    }
+    
+    if (statusFilter !== 'all') {
+        filteredSensors = filteredSensors.filter(sensor => sensor.status === statusFilter);
+    }
+    
+    // Sort by status (error first, then timeout, then unknown, then active)
+    filteredSensors.sort((a, b) => {
+        const statusOrder = { 'error': 0, 'crc_error': 1, 'timeout': 2, 'unknown': 3, 'active': 4 };
+        return statusOrder[a.status] - statusOrder[b.status];
+    });
+    
+    // Add rows for each sensor
+    filteredSensors.forEach(sensor => {
+        const row = document.createElement('tr');
+        
+        // Status class
+        let statusClass = 'status-unknown';
+        if (sensor.status === 'active') {
+            statusClass = 'status-active';
+        } else if (sensor.status === 'error' || sensor.status === 'crc_error') {
+            statusClass = 'status-error';
+        } else if (sensor.status === 'timeout') {
+            statusClass = 'status-timeout';
+        }
+        
+        // Priority class
+        const priorityClass = `priority-${sensor.priority}`;
+        
+        // Format last reading
+        let lastValue = 'N/A';
+        let timestamp = 'N/A';
+        
+        if (sensor.last_reading) {
+            lastValue = sensor.last_reading.value !== null ? sensor.last_reading.value : 'N/A';
+            timestamp = new Date(sensor.last_reading.timestamp).toLocaleString();
+        }
+        
+        row.className = priorityClass;
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${sensor.name}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-500">${sensor.description || 'N/A'}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-500">${sensor.group_name}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                    ${sensor.status}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${lastValue}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${timestamp}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button class="text-indigo-600 hover:text-indigo-900 view-sensor-details" data-sensor="${sensor.name}">
+                    Details
+                </button>
+            </td>
+        `;
+        
+        table.appendChild(row);
+    });
+    
+    // If no sensors, add a message
+    if (filteredSensors.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
+                Keine Sensoren gefunden.
+            </td>
+        `;
+        table.appendChild(row);
+    }
+    
+    // Add event listeners for sensor details
+    const detailButtons = document.querySelectorAll('.view-sensor-details');
+    detailButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const sensorName = button.getAttribute('data-sensor');
+            showSensorDetails(sensorName);
+        });
+    });
+}
+
+// Update Group Filter
+function updateGroupFilter(data) {
+    const groupFilter = document.getElementById('group-filter');
+    if (!groupFilter) return;
+    
+    // Clear existing options (except 'all')
+    while (groupFilter.options.length > 1) {
+        groupFilter.remove(1);
+    }
+    
+    // Add options for each group
+    const groups = Object.keys(data.groups || {}).sort();
+    
+    groups.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group;
+        option.textContent = group;
+        groupFilter.appendChild(option);
+    });
+    
+    // Add event listener
+    groupFilter.addEventListener('change', () => {
+        const statusFilter = document.getElementById('status-filter');
+        updateSensorsTable(data, groupFilter.value, statusFilter ? statusFilter.value : 'all');
+    });
+    
+    // Add event listener for status filter
+    const statusFilter = document.getElementById('status-filter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => {
+            updateSensorsTable(data, groupFilter.value, statusFilter.value);
+        });
+    }
+}
+
+// Show Sensor Details
+function showSensorDetails(sensorName) {
+    // Get modal elements
+    const modal = document.getElementById('sensor-details-modal');
+    const modalSensorName = document.getElementById('modal-sensor-name');
+    const modalDescription = document.getElementById('modal-description');
+    const modalGroup = document.getElementById('modal-group');
+    const modalPriority = document.getElementById('modal-priority');
+    const modalPolling = document.getElementById('modal-polling');
+    const modalEnabled = document.getElementById('modal-enabled');
+    const modalWritable = document.getElementById('modal-writable');
+    const modalAddress = document.getElementById('modal-address');
+    const modalEntityId = document.getElementById('modal-entity-id');
+    const modalStatus = document.getElementById('modal-status');
+    const modalLastValue = document.getElementById('modal-last-value');
+    const modalTimestamp = document.getElementById('modal-timestamp');
+    const modalResponseTime = document.getElementById('modal-response-time');
+    const modalSuccessRate = document.getElementById('modal-success-rate');
+    const modalErrorCount = document.getElementById('modal-error-count');
+    const modalMqttHistory = document.getElementById('modal-mqtt-history');
+    const modalInputPolling = document.getElementById('modal-input-polling');
+    const modalInputPriority = document.getElementById('modal-input-priority');
+    const modalInputEnabled = document.getElementById('modal-input-enabled');
+    
+    // Fetch sensor details
+    fetch(`${API_BASE_URL}/api/sensors/${sensorName}/status`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const sensor = data.data;
+                
+                // Set modal title
+                if (modalSensorName) modalSensorName.textContent = sensor.name;
+                
+                // Set sensor info
+                if (modalDescription) modalDescription.textContent = sensor.description || 'N/A';
+                if (modalGroup) modalGroup.textContent = sensor.group || 'N/A';
+                if (modalPriority) modalPriority.textContent = sensor.priority || 'N/A';
+                if (modalPolling) modalPolling.textContent = `${sensor.polling_interval || 'N/A'} s`;
+                if (modalEnabled) modalEnabled.textContent = sensor.enabled ? 'Ja' : 'Nein';
+                if (modalWritable) modalWritable.textContent = sensor.writable ? 'Ja' : 'Nein';
+                if (modalAddress) modalAddress.textContent = sensor.nasa_address || 'N/A';
+                if (modalEntityId) modalEntityId.textContent = sensor.hass_entity_id || 'N/A';
+                
+                // Set status info
+                if (modalStatus) {
+                    let statusClass = 'text-gray-600';
+                    if (sensor.status === 'active') {
+                        statusClass = 'text-green-600';
+                    } else if (sensor.status === 'error' || sensor.status === 'crc_error') {
+                        statusClass = 'text-red-600';
+                    } else if (sensor.status === 'timeout') {
+                        statusClass = 'text-yellow-600';
+                    }
+                    
+                    modalStatus.textContent = sensor.status || 'N/A';
+                    modalStatus.className = `font-semibold ${statusClass}`;
+                }
+                
+                // Set last reading
+                if (sensor.last_reading) {
+                    if (modalLastValue) modalLastValue.textContent = sensor.last_reading.value !== null ? sensor.last_reading.value : 'N/A';
+                    if (modalTimestamp) modalTimestamp.textContent = sensor.last_reading.timestamp ? new Date(sensor.last_reading.timestamp).toLocaleString() : 'N/A';
+                    if (modalResponseTime) modalResponseTime.textContent = sensor.last_reading.response_time_ms !== null ? `${sensor.last_reading.response_time_ms.toFixed(2)} ms` : 'N/A';
+                } else {
+                    if (modalLastValue) modalLastValue.textContent = 'N/A';
+                    if (modalTimestamp) modalTimestamp.textContent = 'N/A';
+                    if (modalResponseTime) modalResponseTime.textContent = 'N/A';
+                }
+                
+                // Set statistics
+                if (sensor.statistics) {
+                    if (modalSuccessRate) modalSuccessRate.textContent = `${sensor.statistics.success_rate || 0}%`;
+                    if (modalErrorCount) modalErrorCount.textContent = sensor.statistics.error_count || 0;
+                } else {
+                    if (modalSuccessRate) modalSuccessRate.textContent = 'N/A';
+                    if (modalErrorCount) modalErrorCount.textContent = 'N/A';
+                }
+                
+                // Set form inputs
+                if (modalInputPolling) modalInputPolling.value = sensor.polling_interval || 60;
+                if (modalInputPriority) modalInputPriority.value = sensor.priority || 3;
+                if (modalInputEnabled) modalInputEnabled.checked = sensor.enabled !== false;
+                
+                // Set data attribute for save button
+                const saveButton = document.getElementById('modal-save-config');
+                if (saveButton) {
+                    saveButton.setAttribute('data-sensor', sensor.name);
+                }
+                
+                // Show modal
+                if (modal) modal.classList.remove('hidden');
+                
+                // Load MQTT history
+                loadSensorMQTTHistory(sensor.name);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading sensor details:", error);
+        });
+}
+
+// Load Sensor MQTT History
+function loadSensorMQTTHistory(sensorName) {
+    const historyContainer = document.getElementById('modal-mqtt-history');
+    if (!historyContainer) return;
+    
+    // Show loading
+    historyContainer.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Lade Daten...</div>';
+    
+    // Fetch MQTT history
+    fetch(`${API_BASE_URL}/api/mqtt/history/${sensorName}?hours=24`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateSensorMQTTHistory(data.data);
+            } else {
+                historyContainer.innerHTML = `<div class="text-center py-4 text-red-600">Fehler: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error("Error loading MQTT history:", error);
+            historyContainer.innerHTML = '<div class="text-center py-4 text-red-600">Fehler beim Laden der MQTT-Historie.</div>';
+        });
+}
+
+// Update Sensor MQTT History
+function updateSensorMQTTHistory(data) {
+    const historyContainer = document.getElementById('modal-mqtt-history');
+    if (!historyContainer) return;
+    
+    // Clear container
+    historyContainer.innerHTML = '';
+    
+    // Check if there's any data
+    if (!data.communication_flows || data.communication_flows.length === 0) {
+        historyContainer.innerHTML = '<div class="text-center py-4 text-gray-500">Keine MQTT-Kommunikation in den letzten 24 Stunden.</div>';
+        return;
+    }
+    
+    // Create table
+    const table = document.createElement('table');
+    table.className = 'min-w-full divide-y divide-gray-200';
+    
+    // Create header
+    const thead = document.createElement('thead');
+    thead.className = 'bg-gray-50';
+    thead.innerHTML = `
+        <tr>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zeit</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Initiiert von</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SET-Wert</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATE-Wert</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Antwortzeit</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+    
+    // Create body
+    const tbody = document.createElement('tbody');
+    tbody.className = 'bg-white divide-y divide-gray-200';
+    
+    // Add rows
+    data.communication_flows.forEach(flow => {
+        const row = document.createElement('tr');
+        
+        // Format timestamp
+        const timestamp = new Date(flow.timestamp).toLocaleTimeString();
+        
+        // Format values
+        const setValue = flow.set_value !== null ? flow.set_value : 'N/A';
+        const stateValue = flow.state_value !== null ? flow.state_value : 'N/A';
+        
+        // Format response time
+        const responseTime = flow.response_time_ms !== null ? `${flow.response_time_ms.toFixed(2)} ms` : 'N/A';
+        
+        // Status class
+        let statusClass = 'text-gray-600';
+        if (flow.success) {
+            statusClass = 'text-green-600';
+        } else if (flow.error_message) {
+            statusClass = 'text-red-600';
+        }
+        
+        row.innerHTML = `
+            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${timestamp}</td>
+            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${flow.initiated_by === 'home_assistant' ? 'Home Assistant' : 'EHS-Sentinel'}</td>
+            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${setValue}</td>
+            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${stateValue}</td>
+            <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${responseTime}</td>
+            <td class="px-4 py-2 whitespace-nowrap text-sm ${statusClass}">
+                ${flow.success ? '✅ Erfolgreich' : (flow.error_message || 'Unbekannt')}
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    historyContainer.appendChild(table);
+}
+
+// Save Sensor Config
+function saveSensorConfig() {
+    const saveButton = document.getElementById('modal-save-config');
+    if (!saveButton) return;
+    
+    const sensorName = saveButton.getAttribute('data-sensor');
+    if (!sensorName) return;
+    
+    const pollingInput = document.getElementById('modal-input-polling');
+    const priorityInput = document.getElementById('modal-input-priority');
+    const enabledInput = document.getElementById('modal-input-enabled');
+    
+    if (!pollingInput || !priorityInput || !enabledInput) return;
+    
+    const updates = {
+        polling_interval: parseInt(pollingInput.value, 10),
+        priority: parseInt(priorityInput.value, 10),
+        enabled: enabledInput.checked
+    };
+    
+    // Validate inputs
+    if (isNaN(updates.polling_interval) || updates.polling_interval < 1) {
+        alert('Polling-Intervall muss mindestens 1 Sekunde sein.');
+        return;
+    }
+    
+    if (isNaN(updates.priority) || updates.priority < 1 || updates.priority > 5) {
+        alert('Priorität muss zwischen 1 und 5 liegen.');
+        return;
+    }
+    
+    // Send update
+    fetch(`${API_BASE_URL}/api/config/parameter/${sensorName}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Sensor-Konfiguration erfolgreich gespeichert.');
+                
+                // Close modal
+                const modal = document.getElementById('sensor-details-modal');
+                if (modal) modal.classList.add('hidden');
+                
+                // Reload sensors data
+                loadSensorsData();
+            } else {
+                alert(`Fehler: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error("Error saving sensor config:", error);
+            alert('Fehler beim Speichern der Sensor-Konfiguration.');
+        });
+}
+
+// MQTT Data Loading
+function loadMQTTData() {
+    console.log("Loading MQTT data...");
+    
+    // Load MQTT stats
+    fetch(`${API_BASE_URL}/api/mqtt/stats`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateMQTTStats(data.data);
+                updateMQTTRecentErrors(data.data.recent_errors || []);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading MQTT data:", error);
+        });
+    
+    // Load sensors for MQTT filter
+    fetch(`${API_BASE_URL}/api/sensors/status`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateMQTTSensorFilter(data.data);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading sensors for MQTT filter:", error);
+        });
+}
+
+// Update MQTT Sensor Filter
+function updateMQTTSensorFilter(data) {
+    const sensorFilter = document.getElementById('mqtt-sensor-filter');
+    if (!sensorFilter) return;
+    
+    // Clear existing options (except empty)
+    while (sensorFilter.options.length > 1) {
+        sensorFilter.remove(1);
+    }
+    
+    // Collect all sensors from all groups
+    const allSensors = [];
+    
+    Object.values(data.groups || {}).forEach(group => {
+        group.sensors.forEach(sensor => {
+            allSensors.push(sensor);
+        });
+    });
+    
+    // Sort by name
+    allSensors.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Add options for each sensor
+    allSensors.forEach(sensor => {
+        const option = document.createElement('option');
+        option.value = sensor.name;
+        option.textContent = sensor.name;
+        sensorFilter.appendChild(option);
+    });
+}
+
+// Load MQTT History
+function loadMQTTHistory() {
+    const sensorFilter = document.getElementById('mqtt-sensor-filter');
+    if (!sensorFilter || !sensorFilter.value) {
+        alert('Bitte wählen Sie einen Sensor aus.');
+        return;
+    }
+    
+    const sensorName = sensorFilter.value;
+    const historyContainer = document.getElementById('mqtt-history-container');
+    const historyTable = document.getElementById('mqtt-history-table');
+    
+    if (!historyContainer || !historyTable) return;
+    
+    // Show loading
+    historyTable.innerHTML = `
+        <tr>
+            <td colspan="7" class="px-6 py-4 text-center">
+                <i class="fas fa-spinner fa-spin mr-2"></i>Lade Daten...
+            </td>
+        </tr>
+    `;
+    
+    // Fetch MQTT history
+    fetch(`${API_BASE_URL}/api/mqtt/history/${sensorName}?hours=24`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateMQTTHistoryTable(data.data);
+            } else {
+                historyTable.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-4 text-center text-red-600">
+                            Fehler: ${data.error}
+                        </td>
+                    </tr>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error("Error loading MQTT history:", error);
+            historyTable.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-6 py-4 text-center text-red-600">
+                        Fehler beim Laden der MQTT-Historie.
+                    </td>
+                </tr>
+            `;
+        });
+}
+
+// Update MQTT History Table
+function updateMQTTHistoryTable(data) {
+    const historyTable = document.getElementById('mqtt-history-table');
+    if (!historyTable) return;
+    
+    // Clear table
+    historyTable.innerHTML = '';
+    
+    // Check if there's any data
+    if (!data.communication_flows || data.communication_flows.length === 0) {
+        historyTable.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                    Keine MQTT-Kommunikation in den letzten 24 Stunden.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Add rows
+    data.communication_flows.forEach(flow => {
+        const row = document.createElement('tr');
+        
+        // Format timestamp
+        const timestamp = new Date(flow.timestamp).toLocaleString();
+        
+        // Format values
+        const setValue = flow.set_value !== null ? flow.set_value : 'N/A';
+        const stateValue = flow.state_value !== null ? flow.state_value : 'N/A';
+        
+        // Format response time
+        const responseTime = flow.response_time_ms !== null ? `${flow.response_time_ms.toFixed(2)} ms` : 'N/A';
+        
+        // Status class
+        let statusClass = 'text-gray-600';
+        if (flow.success) {
+            statusClass = 'text-green-600';
+        } else if (flow.error_message) {
+            statusClass = 'text-red-600';
+        }
+        
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${timestamp}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${flow.initiated_by === 'home_assistant' ? 'SET' : 'STATE'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${flow.initiated_by === 'home_assistant' ? 'Home Assistant' : 'EHS-Sentinel'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${setValue}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stateValue}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${responseTime}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm ${statusClass}">
+                ${flow.success ? '✅ Erfolgreich' : (flow.error_message || 'Unbekannt')}
+            </td>
+        `;
+        
+        historyTable.appendChild(row);
+    });
+}
+
+// Logs Data Loading
+function loadLogsData() {
+    console.log("Loading logs data...");
+    
+    // Load log stats
+    fetch(`${API_BASE_URL}/api/logs/stats`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateLogStatsView(data.data);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading log stats:", error);
+        });
+    
+    // Load sensors for log filter
+    fetch(`${API_BASE_URL}/api/sensors/status`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateLogSensorFilter(data.data);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading sensors for log filter:", error);
+        });
+    
+    // Load logs (default: last 50)
+    fetch(`${API_BASE_URL}/api/logs?limit=50`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateLogEntriesTable(data.data.logs);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading logs:", error);
+        });
+}
+
+// Update Log Stats View
+function updateLogStatsView(data) {
+    // Level breakdown
+    const levelStats = document.getElementById('log-stats-level');
+    if (levelStats && data.level_breakdown) {
+        // Clear existing stats
+        levelStats.innerHTML = '';
+        
+        // Add stats for each level
+        const levels = Object.keys(data.level_breakdown).sort();
+        
+        levels.forEach(level => {
+            const count = data.level_breakdown[level];
+            
+            // Level color
+            let levelColor = 'text-gray-600';
+            if (level === 'ERROR') {
+                levelColor = 'text-red-600';
+            } else if (level === 'WARNING') {
+                levelColor = 'text-yellow-600';
+            } else if (level === 'INFO') {
+                levelColor = 'text-blue-600';
+            } else if (level === 'DEBUG') {
+                levelColor = 'text-gray-500';
+            }
+            
+            const div = document.createElement('div');
+            div.className = 'flex justify-between';
+            div.innerHTML = `
+                <span class="text-gray-600">${level}:</span>
+                <span class="font-semibold ${levelColor}">${count}</span>
+            `;
+            
+            levelStats.appendChild(div);
+        });
+    }
+    
+    // Category breakdown
+    const categoryStats = document.getElementById('log-stats-category');
+    if (categoryStats && data.category_breakdown) {
+        // Clear existing stats
+        categoryStats.innerHTML = '';
+        
+        // Add stats for each category
+        const categories = Object.keys(data.category_breakdown).sort();
+        
+        categories.forEach(category => {
+            const count = data.category_breakdown[category];
+            
+            const div = document.createElement('div');
+            div.className = 'flex justify-between';
+            div.innerHTML = `
+                <span class="text-gray-600">${category}:</span>
+                <span class="font-semibold">${count}</span>
+            `;
+            
+            categoryStats.appendChild(div);
+        });
+    }
+    
+    // Sensor breakdown
+    const sensorStats = document.getElementById('log-stats-sensors');
+    if (sensorStats && data.sensor_breakdown) {
+        // Clear existing stats
+        sensorStats.innerHTML = '';
+        
+        // Get sensors with errors
+        const sensorsWithErrors = Object.entries(data.sensor_breakdown)
+            .filter(([_, stats]) => stats.errors > 0)
+            .sort((a, b) => b[1].errors - a[1].errors)
+            .slice(0, 5);
+        
+        if (sensorsWithErrors.length === 0) {
+            sensorStats.innerHTML = '<div class="text-center text-gray-500">Keine Sensoren mit Fehlern.</div>';
+            return;
+        }
+        
+        // Add stats for each sensor
+        sensorsWithErrors.forEach(([sensor, stats]) => {
+            const errorRate = stats.errors / stats.total * 100;
+            
+            // Error rate color
+            let errorColor = 'text-green-600';
+            if (errorRate > 50) {
+                errorColor = 'text-red-600';
+            } else if (errorRate > 20) {
+                errorColor = 'text-yellow-600';
+            } else if (errorRate > 5) {
+                errorColor = 'text-orange-600';
+            }
+            
+            const div = document.createElement('div');
+            div.className = 'flex justify-between';
+            div.innerHTML = `
+                <span class="text-gray-600">${sensor}:</span>
+                <span class="font-semibold ${errorColor}">${stats.errors} / ${stats.total} (${errorRate.toFixed(1)}%)</span>
+            `;
+            
+            sensorStats.appendChild(div);
+        });
+    }
+}
+
+// Update Log Sensor Filter
+function updateLogSensorFilter(data) {
+    const sensorFilter = document.getElementById('log-filter-sensor');
+    if (!sensorFilter) return;
+    
+    // Clear existing options (except empty)
+    while (sensorFilter.options.length > 1) {
+        sensorFilter.remove(1);
+    }
+    
+    // Collect all sensors from all groups
+    const allSensors = [];
+    
+    Object.values(data.groups || {}).forEach(group => {
+        group.sensors.forEach(sensor => {
+            allSensors.push(sensor);
+        });
+    });
+    
+    // Sort by name
+    allSensors.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Add options for each sensor
+    allSensors.forEach(sensor => {
+        const option = document.createElement('option');
+        option.value = sensor.name;
+        option.textContent = sensor.name;
+        sensorFilter.appendChild(option);
+    });
+}
+
+// Update Log Entries Table
+function updateLogEntriesTable(logs) {
+    const table = document.getElementById('log-entries-table');
+    if (!table) return;
+    
+    // Clear existing rows
+    table.innerHTML = '';
+    
+    // Check if there are any logs
+    if (!logs || logs.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                    Keine Log-Einträge gefunden.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Add rows for each log entry
+    logs.forEach(log => {
+        const row = document.createElement('tr');
+        
+        // Level class
+        let levelClass = 'text-gray-600';
+        if (log.level === 'ERROR') {
+            levelClass = 'text-red-600';
+        } else if (log.level === 'WARNING') {
+            levelClass = 'text-yellow-600';
+        } else if (log.level === 'INFO') {
+            levelClass = 'text-blue-600';
+        } else if (log.level === 'DEBUG') {
+            levelClass = 'text-gray-500';
+        }
+        
+        // Format timestamp
+        const timestamp = new Date(log.timestamp).toLocaleString();
+        
+        // Format details
+        let details = 'N/A';
+        if (log.details && Object.keys(log.details).length > 0) {
+            details = JSON.stringify(log.details, null, 2);
+        }
+        
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${timestamp}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${levelClass}">
+                    ${log.level}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${log.category}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${log.sensor_name || 'N/A'}</td>
+            <td class="px-6 py-4 text-sm text-gray-500">${log.message}</td>
+            <td class="px-6 py-4 text-sm text-gray-500">
+                <details>
+                    <summary class="cursor-pointer">Details anzeigen</summary>
+                    <pre class="mt-2 text-xs bg-gray-100 p-2 rounded">${details}</pre>
+                </details>
+            </td>
+        `;
+        
+        table.appendChild(row);
+    });
+}
+
+// Apply Log Filters
+function applyLogFilters() {
+    // Get filter values
+    const level = document.getElementById('log-filter-level').value;
+    const category = document.getElementById('log-filter-category').value;
+    const sensor = document.getElementById('log-filter-sensor').value;
+    const start = document.getElementById('log-filter-start').value;
+    const end = document.getElementById('log-filter-end').value;
+    const errorsOnly = document.getElementById('log-filter-errors').checked;
+    
+    // Build query string
+    let queryString = '?limit=50';
+    
+    if (level) queryString += `&level=${level}`;
+    if (category) queryString += `&category=${category}`;
+    if (sensor) queryString += `&sensor_name=${sensor}`;
+    if (start) queryString += `&start_time=${start}`;
+    if (end) queryString += `&end_time=${end}`;
+    if (errorsOnly) queryString += '&errors_only=true';
+    
+    // Fetch filtered logs
+    fetch(`${API_BASE_URL}/api/logs${queryString}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateLogEntriesTable(data.data.logs);
+            }
+        })
+        .catch(error => {
+            console.error("Error applying log filters:", error);
+        });
+}
+
+// Export Logs
+function exportLogs() {
+    // Get filter values
+    const level = document.getElementById('log-filter-level').value;
+    const category = document.getElementById('log-filter-category').value;
+    const sensor = document.getElementById('log-filter-sensor').value;
+    const start = document.getElementById('log-filter-start').value;
+    const end = document.getElementById('log-filter-end').value;
+    const errorsOnly = document.getElementById('log-filter-errors').checked;
+    
+    // Build query string
+    let queryString = '?format=json';
+    
+    if (level) queryString += `&level=${level}`;
+    if (category) queryString += `&category=${category}`;
+    if (sensor) queryString += `&sensor_name=${sensor}`;
+    if (start) queryString += `&start_time=${start}`;
+    if (end) queryString += `&end_time=${end}`;
+    if (errorsOnly) queryString += '&errors_only=true';
+    
+    // Open export URL in new tab
+    window.open(`${API_BASE_URL}/api/logs/export${queryString}`, '_blank');
+}
+
+// Load More Logs
+function loadMoreLogs() {
+    // Get current number of logs
+    const table = document.getElementById('log-entries-table');
+    if (!table) return;
+    
+    const currentCount = table.querySelectorAll('tr').length;
+    
+    // Get filter values
+    const level = document.getElementById('log-filter-level').value;
+    const category = document.getElementById('log-filter-category').value;
+    const sensor = document.getElementById('log-filter-sensor').value;
+    const start = document.getElementById('log-filter-start').value;
+    const end = document.getElementById('log-filter-end').value;
+    const errorsOnly = document.getElementById('log-filter-errors').checked;
+    
+    // Build query string
+    let queryString = `?limit=${currentCount + 50}`;
+    
+    if (level) queryString += `&level=${level}`;
+    if (category) queryString += `&category=${category}`;
+    if (sensor) queryString += `&sensor_name=${sensor}`;
+    if (start) queryString += `&start_time=${start}`;
+    if (end) queryString += `&end_time=${end}`;
+    if (errorsOnly) queryString += '&errors_only=true';
+    
+    // Fetch more logs
+    fetch(`${API_BASE_URL}/api/logs${queryString}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateLogEntriesTable(data.data.logs);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading more logs:", error);
+        });
+}
+
+// Configuration Data Loading
+function loadConfigurationData() {
+    console.log("Loading configuration data...");
+    
+    // Load UI configuration
+    fetch(`${API_BASE_URL}/api/config/ui`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateConfigurationView(data.data);
+            }
+        })
+        .catch(error => {
+            console.error("Error loading configuration:", error);
+        });
+}
+
+// Update Configuration View
+function updateConfigurationView(data) {
+    // Update group configuration table
+    updateGroupConfigTable(data.groups);
+    
+    // Update parameter configuration table
+    updateParameterConfigTable(data.parameters);
+    
+    // Update group filter
+    updateConfigGroupFilter(data.groups);
+}
+
+// Update Group Config Table
+function updateGroupConfigTable(groups) {
+    const table = document.getElementById('group-config-table');
+    if (!table) return;
+    
+    // Clear existing rows
+    table.innerHTML = '';
+    
+    // Check if there are any groups
+    if (!groups || Object.keys(groups).length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                    Keine Gruppen gefunden.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Add rows for each group
+    Object.entries(groups).forEach(([name, group]) => {
+        const row = document.createElement('tr');
+        
+        // Status class
+        let statusClass = 'text-gray-600';
+        if (group.enabled) {
+            statusClass = 'text-green-600';
+        } else {
+            statusClass = 'text-red-600';
+        }
+        
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${name}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${group.description || 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${group.priority || 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${group.default_polling_interval || 'N/A'} s</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${group.parameter_count || 0}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                    ${group.enabled ? 'Aktiviert' : 'Deaktiviert'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button class="text-indigo-600 hover:text-indigo-900 edit-group" data-group="${name}">
+                    Bearbeiten
+                </button>
+            </td>
+        `;
+        
+        table.appendChild(row);
+    });
+    
+    // Add event listeners for edit buttons
+    const editButtons = document.querySelectorAll('.edit-group');
+    editButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const groupName = button.getAttribute('data-group');
+            showGroupEditModal(groupName, groups[groupName]);
+        });
+    });
+}
+
+// Show Group Edit Modal
+function showGroupEditModal(groupName, group) {
+    // Get modal elements
+    const modal = document.getElementById('group-edit-modal');
+    const modalName = document.getElementById('group-modal-name');
+    const modalPolling = document.getElementById('group-modal-polling');
+    const modalEnabled = document.getElementById('group-modal-enabled');
+    
+    if (!modal || !modalName || !modalPolling || !modalEnabled) return;
+    
+    // Set modal title
+    modalName.textContent = `Gruppe: ${groupName}`;
+    
+    // Set form inputs
+    modalPolling.value = group.default_polling_interval || 60;
+    modalEnabled.checked = group.enabled !== false;
+    
+    // Set data attribute for save button
+    const saveButton = document.getElementById('group-modal-save');
+    if (saveButton) {
+        saveButton.setAttribute('data-group', groupName);
+    }
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+// Save Group Config
+function saveGroupConfig() {
+    const saveButton = document.getElementById('group-modal-save');
+    if (!saveButton) return;
+    
+    const groupName = saveButton.getAttribute('data-group');
+    if (!groupName) return;
+    
+    const pollingInput = document.getElementById('group-modal-polling');
+    const enabledInput = document.getElementById('group-modal-enabled');
+    
+    if (!pollingInput || !enabledInput) return;
+    
+    const updates = {
+        default_polling_interval: parseInt(pollingInput.value, 10),
+        enabled: enabledInput.checked
+    };
+    
+    // Validate inputs
+    if (isNaN(updates.default_polling_interval) || updates.default_polling_interval < 1) {
+        alert('Polling-Intervall muss mindestens 1 Sekunde sein.');
+        return;
+    }
+    
+    // Send update
+    fetch(`${API_BASE_URL}/api/config/group/${groupName}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Gruppen-Konfiguration erfolgreich gespeichert.');
+                
+                // Close modal
+                const modal = document.getElementById('group-edit-modal');
+                if (modal) modal.classList.add('hidden');
+                
+                // Reload configuration data
+                loadConfigurationData();
+            } else {
+                alert(`Fehler: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error("Error saving group config:", error);
+            alert('Fehler beim Speichern der Gruppen-Konfiguration.');
+        });
+}
+
+// Update Parameter Config Table
+function updateParameterConfigTable(parameters, groupFilter = 'all') {
+    const table = document.getElementById('parameter-config-table');
+    if (!table) return;
+    
+    // Clear existing rows
+    table.innerHTML = '';
+    
+    // Check if there are any parameters
+    if (!parameters || Object.keys(parameters).length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                    Keine Parameter gefunden.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Filter parameters by group
+    let filteredParameters = Object.entries(parameters);
+    
+    if (groupFilter !== 'all') {
+        filteredParameters = filteredParameters.filter(([_, param]) => param.group === groupFilter);
+    }
+    
+    // Sort by name
+    filteredParameters.sort((a, b) => a[0].localeCompare(b[0]));
+    
+    // Add rows for each parameter
+    filteredParameters.forEach(([name, param]) => {
+        const row = document.createElement('tr');
+        
+        // Status class
+        let statusClass = 'text-gray-600';
+        if (param.enabled) {
+            statusClass = 'text-green-600';
+        } else {
+            statusClass = 'text-red-600';
+        }
+        
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${name}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${param.display_name || 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${param.type || 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${param.group || 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${param.polling_interval || 'N/A'} s</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${param.priority || 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                    ${param.enabled ? 'Ja' : 'Nein'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button class="text-indigo-600 hover:text-indigo-900 view-sensor-details" data-sensor="${name}">
+                    Bearbeiten
+                </button>
+            </td>
+        `;
+        
+        table.appendChild(row);
+    });
+    
+    // Add event listeners for sensor details
+    const detailButtons = document.querySelectorAll('.view-sensor-details');
+    detailButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const sensorName = button.getAttribute('data-sensor');
+            showSensorDetails(sensorName);
+        });
+    });
+}
+
+// Update Config Group Filter
+function updateConfigGroupFilter(groups) {
+    const groupFilter = document.getElementById('config-group-filter');
+    if (!groupFilter) return;
+    
+    // Clear existing options (except 'all')
+    while (groupFilter.options.length > 1) {
+        groupFilter.remove(1);
+    }
+    
+    // Add options for each group
+    const groupNames = Object.keys(groups).sort();
+    
+    groupNames.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group;
+        option.textContent = group;
+        groupFilter.appendChild(option);
+    });
+    
+    // Add event listener
+    groupFilter.addEventListener('change', () => {
+        // Get parameters from the UI config
+        fetch(`${API_BASE_URL}/api/config/ui`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateParameterConfigTable(data.data.parameters, groupFilter.value);
+                }
+            })
+            .catch(error => {
+                console.error("Error loading parameters for filter:", error);
+            });
+    });
+}
+
+// Documentation Loading
+function loadDocumentation() {
+    console.log("Loading documentation...");
+    
+    // Load MQTT documentation by default
+    loadMQTTDocumentation();
+}
+
+// Load MQTT Documentation
+function loadMQTTDocumentation() {
+    fetch(`${API_BASE_URL}/api/documentation/mqtt`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const container = document.getElementById('mqtt-doc-content');
+                if (container) {
+                    container.innerHTML = marked.parse(data.data.content);
+                }
+            }
+        })
+        .catch(error => {
+            console.error("Error loading mqtt documentation:", error);
+        });
+}
+
+// Load Conversion Documentation
+function loadConversionDocumentation() {
+    fetch(`${API_BASE_URL}/api/documentation/conversion`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const container = document.getElementById('conversion-doc-content');
+                if (container) {
+                    container.innerHTML = marked.parse(data.data.content);
+                }
+            }
+        })
+        .catch(error => {
+            console.error("Error loading conversion documentation:", error);
+        });
+}
+
+// Load Troubleshooting Documentation
+function loadTroubleshootingDocumentation() {
+    fetch(`${API_BASE_URL}/api/documentation/troubleshooting`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const container = document.getElementById('troubleshooting-doc-content');
+                if (container) {
+                    container.innerHTML = marked.parse(data.data.content);
+                }
+            }
+        })
+        .catch(error => {
+            console.error("Error loading troubleshooting documentation:", error);
+        });
+}
+
+// Generate Documentation
+function generateDocumentation() {
+    fetch(`${API_BASE_URL}/api/documentation/generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            output_dir: '/data/documentation'
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Dokumentation erfolgreich generiert.');
+            } else {
+                alert(`Fehler: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error("Error generating documentation:", error);
+            alert('Fehler bei der Dokumentationsgenerierung.');
+        });
+}

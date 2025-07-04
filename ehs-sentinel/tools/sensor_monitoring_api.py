@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 API-Endpunkte für Sensor-Monitoring und Konfiguration
 Stellt REST-API für die Addon-UI bereit

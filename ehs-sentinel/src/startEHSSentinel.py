@@ -147,14 +147,6 @@ async def _async_main():
 
     # Initialisiere den PollingManager
     polling_manager = PollingManager()
-    
-    # Starte den API-Server für die Addon-UI
-    try:
-        import subprocess
-        api_process = subprocess.Popen(["python3", "/app/tools/sensor_monitoring_api.py"])
-        logger.info("🚀 Started Sensor Monitoring API on port 5000")
-    except Exception as e:
-        logger.error(f"❌ Failed to start Sensor Monitoring API: {e}")
 
     # we are not in dryrun mode for addon, so we need to read from Serial Port
     try:
