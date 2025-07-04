@@ -1,6 +1,6 @@
 name: "EHS-Sentinel"
 description: "Samsung EHS Wärmepumpen Integration für Home Assistant"
-version: "1.3.16"
+version: "1.3.17"
 slug: "ehs-sentinel"
 init: false
 arch:
