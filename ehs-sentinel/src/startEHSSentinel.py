@@ -70,6 +70,22 @@ def main():
     """
     Main function to start the EHS Sentinel application for Home Assistant Addon.
     """
+    # Create event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        # Run the main async function
+        loop.run_until_complete(_async_main())
+    except Exception as e:
+        logger.error(f"❌ Runtime error: {e}")
+        logger.error(traceback.format_exc())
+    finally:
+        # Clean up
+        loop.close()
+
+async def _async_main():
+    """Async main function with proper event loop setup"""
     logger.info("####################################################################################################################")
     logger.info("#                                                                                                                  #")
     logger.info("#    ######   ##  ##   #####             #####    ######  ##   ##  ########  ######  ##   ##   ######   ##         #")
@@ -92,22 +108,6 @@ def main():
     logger.info(f"👨‍💻 Written by echoDave")
     logger.info("")
 
-    # Create event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    try:
-        # Run the main async function
-        loop.run_until_complete(_async_main())
-    except Exception as e:
-        logger.error(f"❌ Runtime error: {e}")
-        logger.error(traceback.format_exc())
-    finally:
-        # Clean up
-        loop.close()
-
-async def _async_main():
-    """Async main function with proper event loop setup"""
     logger.info("Reading Home Assistant Addon Configuration ...")
     args = EHSArguments()
 

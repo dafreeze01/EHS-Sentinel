@@ -424,6 +424,7 @@ class MQTTCommunicationAnalyzer:
                 
             except Exception as e:
                 logger.error(f"Fehler bei MQTT-Datenbereinigung: {e}")
+                await asyncio.sleep(3600)
 
 # Globale Instanz
 mqtt_analyzer = MQTTCommunicationAnalyzer()

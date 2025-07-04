@@ -15,13 +15,16 @@ if bashio::fs.file_exists "$CONFIG_PATH"; then
     mkdir -p /data/logs
     mkdir -p /data/documentation
     
-    # Start EHS-Sentinel with configuration from addon options
-    cd /app
-    python3 startEHSSentinel.py --addon-config "$CONFIG_PATH" &
-    
     # Start the API server for the UI
     cd /app/tools
-    python3 sensor_monitoring_api.py
+    python3 sensor_monitoring_api.py &
+    
+    # Wait a moment for the API server to start
+    sleep 2
+    
+    # Start EHS-Sentinel with configuration from addon options
+    cd /app
+    python3 src/startEHSSentinel.py --addon-config "$CONFIG_PATH"
     
     # Schedule daily report generation
     (crontab -l 2>/dev/null; echo "0 0 * * * python3 /app/tools/generate_24h_report.py") | crontab -

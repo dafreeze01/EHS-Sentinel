@@ -94,7 +94,7 @@ class ConfigurationManager:
         self._load_saved_configuration()
     
     def _load_nasa_repo(self) -> Dict[str, Any]:
-        """Lädt das NASA Repository"""
+        """Lädt das NASA Repository aus einer YAML-Datei."""
         try:
             with open(self.nasa_repo_path, 'r') as f:
                 return yaml.safe_load(f)
