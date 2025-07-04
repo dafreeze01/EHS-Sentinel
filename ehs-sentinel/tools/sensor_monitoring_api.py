@@ -13,12 +13,24 @@ from datetime import datetime
 # Füge src-Verzeichnis zum Python-Pfad hinzu
 sys.path.append('/app')
 
-# Importiere Module
-from SensorMonitor import sensor_monitor
-from MQTTCommunicationAnalyzer import mqtt_analyzer
-from ConfigurationManager import config_manager
-from LoggingSystem import structured_logger, LogLevel, LogCategory
-from TechnicalDocumentation import tech_docs
+try:
+    # Importiere Module
+    from src.SensorMonitor import sensor_monitor
+    from src.MQTTCommunicationAnalyzer import mqtt_analyzer
+    from src.ConfigurationManager import config_manager
+    from src.LoggingSystem import structured_logger, LogLevel, LogCategory
+    from src.TechnicalDocumentation import tech_docs
+except ImportError as e:
+    print(f"Error importing modules: {e}")
+    # Fallback imports for development environment
+    try:
+        from SensorMonitor import sensor_monitor
+        from MQTTCommunicationAnalyzer import mqtt_analyzer
+        from ConfigurationManager import config_manager
+        from LoggingSystem import structured_logger, LogLevel, LogCategory
+        from TechnicalDocumentation import tech_docs
+    except ImportError as e:
+        print(f"Fallback import also failed: {e}")
 
 app = Flask(__name__)
 CORS(app)

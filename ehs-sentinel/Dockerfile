@@ -20,7 +20,7 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Copy application files
-COPY src/ .
+COPY src/ ./src/
 COPY data/ ./data/
 COPY tools/ ./tools/
 COPY addon_ui/ /opt/ehs-sentinel-ui/
