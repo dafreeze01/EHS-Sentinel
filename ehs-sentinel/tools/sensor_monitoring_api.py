@@ -8,10 +8,12 @@ from flask_cors import CORS
 import json
 import sys
 import os
+from datetime import datetime
 
 # Füge src-Verzeichnis zum Python-Pfad hinzu
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'ehs-sentinel', 'src'))
+sys.path.append('/app')
 
+# Importiere Module
 from SensorMonitor import sensor_monitor
 from MQTTCommunicationAnalyzer import mqtt_analyzer
 from ConfigurationManager import config_manager
